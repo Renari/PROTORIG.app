@@ -33,4 +33,5 @@ jobs:
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
           TARGET: ${{ secrets.REMOTE_TARGET }}
           SCRIPT_AFTER: ${{ secrets.DEPLOY_WISP_SERVICE }}
+          SCRIPT_AFTER_REQUIRED: true
 
