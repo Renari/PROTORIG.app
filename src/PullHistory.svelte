@@ -38,6 +38,54 @@
   $: totalInView = filteredByBanner.length;
   $: sixStarCount = filteredByBanner.filter(i => i.rarity === 6).length;
   $: fiveStarCount = filteredByBanner.filter(i => i.rarity === 5).length;
+  
+  // Calculate specific guarantee pulls which resets when fetching the featured character, and sets the limit to 240
+  $: guarantee = (() => {
+    let count = 0;
+    let limit = 120;
+    if (currentBanner.poolType === 'E_CharacterGachaPoolType_Special' && currentBanner.featuredCharacter) {
+      // sort from oldest to newest to simulate pulls sequentially
+      const chronologicallySorted = [...filteredByBanner].sort((a, b) => Number(a.seqId) - Number(b.seqId));
+      for (const item of chronologicallySorted) {
+        if (!item.isFree) count++;
+        if (item.charId === currentBanner.featuredCharacter) {
+          count = 0;
+          limit = 240;
+        }
+      }
+    }
+    return { count, limit };
+  })();
+
+  // Calculate isolated pities: pools do not share pity between categories
+  function getPoolType(item: EndfieldGachaItem) {
+    const itemPoolNameLower = (item.poolName || '').toLowerCase();
+    const itemPoolIdLower = (item.poolId || '').toLowerCase();
+    
+    if (itemPoolIdLower.includes('standard') || itemPoolNameLower.includes('standard') || itemPoolNameLower.includes('basic headhunting')) {
+      return 'E_CharacterGachaPoolType_Standard';
+    }
+    if (itemPoolIdLower.includes('beginner') || itemPoolNameLower.includes('beginner') || itemPoolNameLower.includes('new horizons')) {
+      return 'E_CharacterGachaPoolType_Beginner';
+    }
+    return 'E_CharacterGachaPoolType_Special';
+  }
+
+  function calculatePity(targetPoolType: string) {
+    let count = 0;
+    const typeItems = items.filter(item => getPoolType(item) === targetPoolType);
+    const sorted = [...typeItems].sort((a, b) => Number(b.seqId) - Number(a.seqId));
+    
+    for (const item of sorted) {
+      if (item.rarity === 6) break;
+      if (!item.isFree) count++;
+    }
+    return count;
+  }
+
+  $: specialPity = calculatePity('E_CharacterGachaPoolType_Special');
+  $: standardPity = calculatePity('E_CharacterGachaPoolType_Standard');
+  $: beginnerPity = calculatePity('E_CharacterGachaPoolType_Beginner');
 
   function formatDate(tsMs: string) {
     const d = new Date(Number(tsMs));
@@ -77,21 +125,22 @@
   {/if}
 
   <!-- Hero and Stats Container -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
     <!-- Banner Hero / Title -->
     {#if currentBanner.image}
       <div class="rounded-2xl overflow-hidden shadow-2xl border border-zinc-700/50 flex items-center justify-center bg-zinc-900/50">
-        <img src={currentBanner.image} alt={currentBanner.label} class="w-full h-full object-cover block" />
+        <img src={currentBanner.image} alt={currentBanner.label} class="w-full h-auto object-contain block" />
       </div>
     {:else}
-      <div class="flex items-center justify-between lg:col-span-2">
+      <div class="flex items-center justify-between xl:col-span-2">
         <h2 class="text-2xl md:text-3xl font-extrabold text-white">{currentBanner.label}</h2>
       </div>
     {/if}
 
     <!-- Stats Row + Action Bar -->
-    <div class="flex flex-col {currentBanner.image ? 'justify-center p-8' : 'lg:flex-row items-start lg:items-center justify-between p-5 lg:col-span-2'} bg-zinc-800/40 backdrop-blur-xl rounded-2xl border border-zinc-700/50 shadow-xl gap-4">
-      <div class="flex flex-wrap {currentBanner.image ? 'gap-8 lg:gap-10 justify-around' : 'gap-6'} w-full">
+    <div class="flex flex-col {currentBanner.image ? 'justify-center p-5 xl:p-8' : 'xl:flex-row items-start xl:items-center justify-between p-5 xl:col-span-2'} bg-zinc-800/40 backdrop-blur-xl rounded-2xl border border-zinc-700/50 shadow-xl gap-4">
+      <div class="flex {currentBanner.image ? 'justify-center gap-x-6 md:gap-x-8 gap-y-6 flex-wrap w-full' : 'gap-6 flex-wrap w-full'}">
+        <!-- Primary Stats -->
         <div class="flex flex-col items-center">
           <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Total</p>
           <p class="font-bold text-white {currentBanner.image ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">{totalInView}</p>
@@ -108,10 +157,50 @@
             {fiveStarCount}
           </p>
         </div>
+        
+        <!-- Responsive Line Break: Forces new row on Desktop (side card) only -->
+        {#if currentBanner.image}
+          <div class="hidden xl:block w-full h-0"></div>
+        {/if}
+
+        <!-- Pity & Guarantee Stats -->
+        {#if bannerId === 'all'}
+          <div class="flex flex-col items-center">
+            <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Special Pity</p>
+            <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 text-3xl">
+              {specialPity}<span class="text-zinc-400">/80</span>
+            </p>
+          </div>
+          <div class="flex flex-col items-center">
+            <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Basic Pity</p>
+            <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 text-3xl">
+              {standardPity}<span class="text-zinc-400">/80</span>
+            </p>
+          </div>
+        {:else if currentBanner.poolType !== 'E_CharacterGachaPoolType_Beginner'}
+          <div class="flex flex-col items-center">
+            <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Pity</p>
+            <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 {currentBanner.image ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
+              {#if currentBanner.poolType === 'E_CharacterGachaPoolType_Standard'}
+                {standardPity}<span class="text-zinc-400">/80</span>
+              {:else}
+                {specialPity}<span class="text-zinc-400">/80</span>
+              {/if}
+            </p>
+          </div>
+          {#if currentBanner.poolType === 'E_CharacterGachaPoolType_Special'}
+            <div class="flex flex-col items-center">
+              <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Guarantee</p>
+              <p class="font-bold text-[#ef4444] flex items-baseline justify-center gap-0.5 {currentBanner.image ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
+                {guarantee.count}<span class="text-zinc-400">/{guarantee.limit}</span>
+              </p>
+            </div>
+          {/if}
+        {/if}
       </div>
       {#if bannerId === 'all'}
-        <div class="flex items-center gap-3 w-full lg:w-auto mt-4 lg:mt-0">
-          <button on:click={onExport} class="flex-1 lg:flex-none justify-center bg-primary-500 hover:bg-primary-400 text-zinc-950 px-4 py-2 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-2">
+        <div class="flex items-center gap-3 w-full xl:w-auto mt-4 xl:mt-0">
+          <button on:click={onExport} class="flex-1 xl:flex-none justify-center bg-primary-500 hover:bg-primary-400 text-zinc-950 px-4 py-2 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-2">
             Export
           </button>
         </div>

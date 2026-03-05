@@ -9,6 +9,7 @@ export interface BannerInfo {
   poolType: string;
   label: string;
   image: string | null;
+  featuredCharacter?: string;
 }
 
 /**
@@ -23,18 +24,21 @@ export const KNOWN_BANNERS: BannerInfo[] = [
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'Hues of Passion',
     image: huesOfPassion,
+    featuredCharacter: 'chr_0017_yvonne',
   },
   {
     id: 'the-floaty-messenger',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'The Floaty Messenger',
     image: theFloatyMessenger,
+    featuredCharacter: 'chr_0013_aglina',
   },
   {
     id: 'scars-of-the-forge',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'Scars of the Forge',
     image: scarsOfTheForge,
+    featuredCharacter: 'chr_0016_laevat',
   },
   {
     id: 'basic-headhunting',
