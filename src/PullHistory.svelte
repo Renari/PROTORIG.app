@@ -76,44 +76,47 @@
     </div>
   {/if}
 
-  <!-- Banner Hero (if viewing specific banner with image) -->
-  {#if currentBanner.image}
-    <div class="rounded-2xl overflow-hidden shadow-2xl border border-zinc-700/50">
-      <img src={currentBanner.image} alt={currentBanner.label} class="w-full h-auto block" />
-    </div>
-  {:else}
-    <div class="flex items-center justify-between">
-      <h2 class="text-2xl md:text-3xl font-extrabold text-white">{currentBanner.label}</h2>
-    </div>
-  {/if}
-
-  <!-- Stats Row + Action Bar -->
-  <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-zinc-800/40 backdrop-blur-xl rounded-2xl border border-zinc-700/50 p-5 shadow-xl">
-    <div class="flex gap-6 flex-wrap">
-      <div>
-        <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Total</p>
-        <p class="text-2xl font-bold text-white">{totalInView}</p>
+  <!-- Hero and Stats Container -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+    <!-- Banner Hero / Title -->
+    {#if currentBanner.image}
+      <div class="rounded-2xl overflow-hidden shadow-2xl border border-zinc-700/50 flex items-center justify-center bg-zinc-900/50">
+        <img src={currentBanner.image} alt={currentBanner.label} class="w-full h-full object-cover block" />
       </div>
-      <div>
-        <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider">6-Star</p>
-        <p class="text-2xl font-bold text-[#ff7000] flex items-center gap-1">
-          {sixStarCount} <Icon icon="ph:star-fill" class="text-sm" />
-        </p>
-      </div>
-      <div>
-        <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider">5-Star</p>
-        <p class="text-2xl font-bold text-[#ffba03] flex items-center gap-1">
-          {fiveStarCount} <Icon icon="ph:star-fill" class="text-sm" />
-        </p>
-      </div>
-    </div>
-    {#if bannerId === 'all'}
-      <div class="flex items-center gap-3 w-full lg:w-auto mt-4 lg:mt-0">
-        <button on:click={onExport} class="flex-1 lg:flex-none justify-center bg-primary-500 hover:bg-primary-400 text-zinc-950 px-4 py-2 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-2">
-          Export
-        </button>
+    {:else}
+      <div class="flex items-center justify-between lg:col-span-2">
+        <h2 class="text-2xl md:text-3xl font-extrabold text-white">{currentBanner.label}</h2>
       </div>
     {/if}
+
+    <!-- Stats Row + Action Bar -->
+    <div class="flex flex-col {currentBanner.image ? 'justify-center p-8' : 'lg:flex-row items-start lg:items-center justify-between p-5 lg:col-span-2'} bg-zinc-800/40 backdrop-blur-xl rounded-2xl border border-zinc-700/50 shadow-xl gap-4">
+      <div class="flex flex-wrap {currentBanner.image ? 'gap-8 lg:gap-10 justify-around' : 'gap-6'} w-full">
+        <div class="flex flex-col items-center">
+          <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Total</p>
+          <p class="font-bold text-white {currentBanner.image ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">{totalInView}</p>
+        </div>
+        <div class="flex flex-col items-center">
+          <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider inline-flex items-center gap-0.5">6<Icon icon="ph:star-fill" class="relative -top-[1px]" /></p>
+          <p class="font-bold text-[#ff7000] flex items-center justify-center gap-1 {currentBanner.image ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
+            {sixStarCount} 
+          </p>
+        </div>
+        <div class="flex flex-col items-center">
+          <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider inline-flex items-center gap-0.5">5<Icon icon="ph:star-fill" class="relative -top-[1px]" /></p>
+          <p class="font-bold text-[#ffba03] flex items-center justify-center gap-1 {currentBanner.image ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
+            {fiveStarCount}
+          </p>
+        </div>
+      </div>
+      {#if bannerId === 'all'}
+        <div class="flex items-center gap-3 w-full lg:w-auto mt-4 lg:mt-0">
+          <button on:click={onExport} class="flex-1 lg:flex-none justify-center bg-primary-500 hover:bg-primary-400 text-zinc-950 px-4 py-2 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-2">
+            Export
+          </button>
+        </div>
+      {/if}
+    </div>
   </div>
 
   <!-- Rarity Filter -->
