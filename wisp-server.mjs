@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { server as wisp, logging } from "@mercuryworkshop/wisp-js/server";
 
 let serverModule;
@@ -10,8 +11,8 @@ if (process.env.NODE_ENV !== "production") {
   serverModule = await import("node:https");
   logging.set_level(logging.INFO);
   options = {
-    key: fs.readFileSync("/etc/ssl/cloudflare-origin.key"),
-    cert: fs.readFileSync("/etc/ssl/cloudflare-origin.pem")
+    key: fs.readFileSync(process.env.SSL_KEY),
+    cert: fs.readFileSync(process.env.SSL_CERT)
   };
 };
 
