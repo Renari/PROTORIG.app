@@ -1,6 +1,7 @@
 import { server as wisp, logging } from "@mercuryworkshop/wisp-js/server";
 
 let serverModule;
+let options = {};
 
 if (process.env.NODE_ENV !== "production") {
   serverModule = await import("node:http");
@@ -8,15 +9,19 @@ if (process.env.NODE_ENV !== "production") {
 } else {
   serverModule = await import("node:https");
   logging.set_level(logging.INFO);
-}
+  options = {
+    key: fs.readFileSync("/etc/ssl/cloudflare-origin.key"),
+    cert: fs.readFileSync("/etc/ssl/cloudflare-origin.pem")
+  };
+};
 
-// Security: only allow connections to the Endfield domain
+// Only allow connections to the Endfield domain
 wisp.options.allow_direct_ip = false;
 wisp.options.hostname_whitelist = [
   /^ef-webview\.gryphline\.com$/
 ];
 
-const server = serverModule.createServer((req, res) => {
+const server = serverModule.createServer(options, (req, res) => {
   res.writeHead(200, { "Content-Type": "text/plain" });
   res.end("PROTORIG.app wisp proxy is running");
 });
