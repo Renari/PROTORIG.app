@@ -9,6 +9,11 @@ export interface BannerInfo {
   poolType: string;
   label: string;
   image: string | null;
+  /**
+   * Optional ID of the featured character for this banner.
+   * Must match `EndfieldGachaItem.charId` and is typically only set for
+   * special/limited character banners used in guarantee reset logic.
+   */
   featuredCharacter?: string;
 }
 

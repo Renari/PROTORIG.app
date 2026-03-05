@@ -39,7 +39,7 @@
   $: sixStarCount = filteredByBanner.filter(i => i.rarity === 6).length;
   $: fiveStarCount = filteredByBanner.filter(i => i.rarity === 5).length;
   
-  // Calculate specific guarantee pulls which resets when fetching the featured character, and sets the limit to 240
+  // Calculate specific guarantee pulls that reset when fetching the featured character, and set the limit to 240
   $: guarantee = (() => {
     let count = 0;
     let limit = 120;
@@ -71,22 +71,36 @@
     return 'E_CharacterGachaPoolType_Special';
   }
 
-  function calculatePity(targetPoolType: string) {
-    let count = 0;
-    const typeItems = items.filter(item => getPoolType(item) === targetPoolType);
-    const sorted = [...typeItems].sort((a, b) => Number(b.seqId) - Number(a.seqId));
-    
-    for (const item of sorted) {
-      if (item.rarity === 6) break;
-      if (!item.isFree) count++;
+  let specialPity = 0;
+  let standardPity = 0;
+  let beginnerPity = 0;
+
+  // Compute pity for all pool types in a single pass over once-sorted items
+  $: {
+    const sortedItems = [...items].sort((a, b) => Number(b.seqId) - Number(a.seqId));
+
+    const pityState: Record<string, { count: number; done: boolean }> = {
+      E_CharacterGachaPoolType_Special: { count: 0, done: false },
+      E_CharacterGachaPoolType_Standard: { count: 0, done: false },
+      E_CharacterGachaPoolType_Beginner: { count: 0, done: false }
+    };
+
+    for (const item of sortedItems) {
+      const poolType = getPoolType(item);
+      const state = pityState[poolType];
+      if (!state || state.done) continue;
+
+      if (item.rarity === 6) {
+        state.done = true;
+      } else if (!item.isFree) {
+        state.count++;
+      }
     }
-    return count;
+
+    specialPity = pityState.E_CharacterGachaPoolType_Special.count;
+    standardPity = pityState.E_CharacterGachaPoolType_Standard.count;
+    beginnerPity = pityState.E_CharacterGachaPoolType_Beginner.count;
   }
-
-  $: specialPity = calculatePity('E_CharacterGachaPoolType_Special');
-  $: standardPity = calculatePity('E_CharacterGachaPoolType_Standard');
-  $: beginnerPity = calculatePity('E_CharacterGachaPoolType_Beginner');
-
   function formatDate(tsMs: string) {
     const d = new Date(Number(tsMs));
     return d.toLocaleString(undefined, {
@@ -192,7 +206,11 @@
             <div class="flex flex-col items-center">
               <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Guarantee</p>
               <p class="font-bold text-[#ef4444] flex items-baseline justify-center gap-0.5 {currentBanner.image ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
-                {guarantee.count}<span class="text-zinc-400">/{guarantee.limit}</span>
+                {#if currentBanner.featuredCharacter}
+                  {guarantee.count}<span class="text-zinc-400">/{guarantee.limit}</span>
+                {:else}
+                  <span class="text-zinc-400">N/A</span>
+                {/if}
               </p>
             </div>
           {/if}
