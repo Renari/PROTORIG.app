@@ -60,9 +60,7 @@
   ];
 
   function isNavActive(page: string, itemId: string): boolean {
-    if (page === itemId) return true;
-    if (itemId === 'pulls' && page.startsWith('banner:')) return true;
-    return false;
+    return page === itemId;
   }
   
   const bannerCategories = [
