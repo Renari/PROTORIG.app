@@ -22,6 +22,10 @@ jobs:
       - name: Install Dependencies
         run: npm ci
       - name: Build
+        env:
+          NODE_ENV: production
+          HOST: 0.0.0.0
+          PORT: 8443
         run: npm run build
       - name: Deploy
         uses: easingthemes/ssh-deploy@v5.1.1
