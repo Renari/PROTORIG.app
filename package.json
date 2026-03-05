@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && bun build wisp-server.mjs --outfile ./dist/wisp-server",
+    "build": "vite build && bun build wisp-server.mjs --compile --outfile ./dist/wisp-server",
     "preview": "vite preview",
     "wisp": "DEVELOPMENT=true node wisp-server.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
