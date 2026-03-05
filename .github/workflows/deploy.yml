@@ -24,10 +24,6 @@ jobs:
       - name: Build
         env:
           NODE_ENV: production
-          HOST: 0.0.0.0
-          PORT: 8443
-          SSL_KEY: ${{ secrets.SSL_KEY }}
-          SSL_CERT: ${{ secrets.SSL_CERT }}
         run: npm run build
       - name: Deploy
         uses: easingthemes/ssh-deploy@v5.1.1

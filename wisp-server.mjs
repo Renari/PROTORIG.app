@@ -4,7 +4,7 @@ import { server as wisp, logging } from "@mercuryworkshop/wisp-js/server";
 let serverModule;
 let options = {};
 
-if (process.env.NODE_ENV !== "production") {
+if (process.env.DEVELOPMENT) {
   serverModule = await import("node:http");
   logging.set_level(logging.DEBUG);
 } else {
