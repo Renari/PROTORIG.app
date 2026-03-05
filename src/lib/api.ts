@@ -2,8 +2,6 @@ import { libcurl } from 'libcurl.js/bundled';
 
 let isInitialized = false;
 
-// We use a public wisp server to proxy our raw Libcurl TCP connections.
-// Since Libcurl handles TLS, the proxy cannot see the token or the response data.
 export async function initLibcurl(wispServerUrl: string = import.meta.env.VITE_WISP_URL) {
   if (isInitialized) return;
   await libcurl.load_wasm();
@@ -90,7 +88,6 @@ export async function fetchAllPulls(
     }
   }
 
-  // Sort by timestamp ascending (oldest first) so it matches UIGF conventions visually later
   allItems.sort((a, b) => Number(a.gachaTs) - Number(b.gachaTs));
 
   return allItems;
