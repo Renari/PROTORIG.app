@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && bun build wisp-server.mjs --outfile ./dist/wisp-server",
     "preview": "vite preview",
     "wisp": "DEVELOPMENT=true node wisp-server.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
@@ -19,6 +19,7 @@
     "@types/he": "^1.2.3",
     "@types/node": "^24.10.1",
     "autoprefixer": "^10.4.27",
+    "bun": "^1.3.10",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
