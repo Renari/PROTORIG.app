@@ -9,12 +9,13 @@
 
   const STORAGE_KEY = 'protorig_app_pulls';
 
-  // Page state: 'import' | 'pulls' | 'banner:<id>'
   let currentPage = 'import';
   let sidebarOpen = false;
 
   let urlInput = '';
   let token = '';
+  let serverId = '';
+  let lang = '';
   let isFetching = false;
   let errorMsg = '';
   let fetchedItems: EndfieldGachaItem[] = [];
@@ -56,36 +57,46 @@
 
   function handleUrlSubmit() {
     errorMsg = '';
-    try {
-      const url = new URL(urlInput);
-      let u8Token = url.searchParams.get('u8_token');
+    const input = urlInput.trim();
 
-      if (!u8Token && !urlInput.includes('http')) {
-        u8Token = urlInput;
-      } else if (!u8Token) {
+    // Attempt to parse as a full URL first
+    let url: URL | null = null;
+    try {
+      url = new URL(input);
+    } catch {
+      // Not a valid URL — fall through to raw token handling below
+    }
+
+    if (url) {
+      const u8Token = url.searchParams.get('u8_token');
+      if (!u8Token) {
         errorMsg = 'Could not find u8_token in the provided URL.';
         return;
       }
 
-      token = decodeURIComponent(he.decode(u8Token as string));
-      startFetching(token);
-    } catch (err) {
-      if (urlInput.length > 20 && !urlInput.includes(' ')) {
-        token = decodeURIComponent(he.decode(urlInput));
-        startFetching(token);
-      } else {
-        errorMsg = 'Invalid input format. Please paste the entire URL beginning with https://';
-      }
+      serverId = url.searchParams.get('server') || '3';
+      lang = url.searchParams.get('lang') || 'en-us';
+      token = decodeURIComponent(he.decode(u8Token));
+    } else if (input.length > 20 && !input.includes(' ')) {
+      // Treat the raw input as a bare token (no URL wrapping)
+      token = decodeURIComponent(he.decode(input));
+      serverId = '3';
+      lang = 'en-us';
+    } else {
+      errorMsg = 'Invalid input format. Please paste the entire URL beginning with https://';
+      return;
     }
+
+    startFetching(token, serverId, lang);
   }
 
-  async function startFetching(currentToken: string) {
+  async function startFetching(currentToken: string, serverId: string, lang: string) {
     isFetching = true;
     errorMsg = '';
     fetchedItems = [];
     fetchingStatus = 'Initializing secure WebAssembly proxy...';
     try {
-      fetchedItems = await fetchAllPulls(currentToken, (pool, count) => {
+      fetchedItems = await fetchAllPulls(currentToken, serverId, lang, (pool, count) => {
         fetchingStatus = `Scanning ${pool} pool... Found ${count} pulls so far.`;
       });
       saveToStorage(fetchedItems);

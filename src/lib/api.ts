@@ -32,6 +32,8 @@ export interface EndfieldGachaResponse {
 
 export async function fetchAllPulls(
   token: string,
+  serverId: string,
+  lang: string,
   onProgress: (pool: string, count: number) => void
 ): Promise<EndfieldGachaItem[]> {
   await initLibcurl();
@@ -46,11 +48,11 @@ export async function fetchAllPulls(
 
     while (hasMore) {
       const url = new URL('https://ef-webview.gryphline.com/api/record/char');
-      url.searchParams.append('lang', 'en-us');
+      url.searchParams.append('lang', lang);
       if (seqId) url.searchParams.append('seq_id', seqId);
       url.searchParams.append('pool_type', poolType);
       url.searchParams.append('token', token);
-      url.searchParams.append('server_id', '3'); // from HAR
+      url.searchParams.append('server_id', serverId);
 
       const response = await libcurl.fetch(url.toString(), {
         method: 'GET',
