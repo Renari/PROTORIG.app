@@ -9,12 +9,13 @@
 
   const STORAGE_KEY = 'protorig_app_pulls';
 
-  // Page state: 'import' | 'pulls' | 'banner:<id>'
   let currentPage = 'import';
   let sidebarOpen = false;
 
   let urlInput = '';
   let token = '';
+  let serverId = '';
+  let lang = '';
   let isFetching = false;
   let errorMsg = '';
   let fetchedItems: EndfieldGachaItem[] = [];
@@ -67,25 +68,29 @@
         return;
       }
 
+      // if the server id is missing assume NA/EU
+      serverId = url.searchParams.get('server') || '2';
+      // if the language is missing default to en-us
+      lang = url.searchParams.get('lang') || 'en-us';
       token = decodeURIComponent(he.decode(u8Token as string));
-      startFetching(token);
+      startFetching(token, serverId, lang);
     } catch (err) {
       if (urlInput.length > 20 && !urlInput.includes(' ')) {
         token = decodeURIComponent(he.decode(urlInput));
-        startFetching(token);
+        startFetching(token, serverId, lang);
       } else {
         errorMsg = 'Invalid input format. Please paste the entire URL beginning with https://';
       }
     }
   }
 
-  async function startFetching(currentToken: string) {
+  async function startFetching(currentToken: string, serverId: string, lang: string) {
     isFetching = true;
     errorMsg = '';
     fetchedItems = [];
     fetchingStatus = 'Initializing secure WebAssembly proxy...';
     try {
-      fetchedItems = await fetchAllPulls(currentToken, (pool, count) => {
+      fetchedItems = await fetchAllPulls(currentToken, serverId, lang, (pool, count) => {
         fetchingStatus = `Scanning ${pool} pool... Found ${count} pulls so far.`;
       });
       saveToStorage(fetchedItems);
