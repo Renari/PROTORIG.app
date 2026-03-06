@@ -61,6 +61,8 @@ export const KNOWN_BANNERS: BannerInfo[] = [
 
 /** Hard pity limit shared across all pool types. */
 export const PITY_LIMIT = 80;
+export const GUARANTEE_LIMIT = 120;
+export const DUPLICATE_GUARANTEE_LIMIT = 240;
 
 /**
  * Checks whether an item belongs to a specific banner

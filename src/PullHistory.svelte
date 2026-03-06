@@ -1,7 +1,15 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
   import type { EndfieldGachaItem } from './lib/api';
-  import { KNOWN_BANNERS, itemMatchesBanner, getPoolTypeForItem, PITY_LIMIT, type BannerInfo } from './lib/banners';
+  import {
+    DUPLICATE_GUARANTEE_LIMIT,
+    GUARANTEE_LIMIT,
+    KNOWN_BANNERS,
+    PITY_LIMIT,
+    getPoolTypeForItem,
+    itemMatchesBanner,
+    type BannerInfo
+  } from './lib/banners';
 
   export let items: EndfieldGachaItem[];
   export let bannerId: string = 'all';
@@ -44,17 +52,17 @@
   // obtaining the featured character the limit extends to 240 for the next copy.
   $: guarantee = (() => {
     if (currentBanner.poolType !== 'E_CharacterGachaPoolType_Special' || !currentBanner.featuredCharacter) {
-      return { count: 0, limit: 120 };
+      return { count: 0, limit: GUARANTEE_LIMIT };
     }
     // Sort oldest-to-newest to simulate pulls sequentially
     const chronologicallySorted = [...filteredByBanner].sort((a, b) => Number(a.seqId) - Number(b.seqId));
     let count = 0;
-    let limit = 120;
+    let limit = GUARANTEE_LIMIT;
     for (const item of chronologicallySorted) {
       if (!item.isFree) count++;
       if (item.charId === currentBanner.featuredCharacter) {
         count = 0;
-        limit = 240;
+        limit = DUPLICATE_GUARANTEE_LIMIT;
       }
     }
     return { count, limit };
