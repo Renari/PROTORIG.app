@@ -1,7 +1,7 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
   import type { EndfieldGachaItem } from './lib/api';
-  import { KNOWN_BANNERS, itemMatchesBanner, type BannerInfo } from './lib/banners';
+  import { KNOWN_BANNERS, itemMatchesBanner, getPoolTypeForItem, PITY_LIMIT, type BannerInfo } from './lib/banners';
 
   export let items: EndfieldGachaItem[];
   export let bannerId: string = 'all';
@@ -39,45 +39,36 @@
   $: sixStarCount = filteredByBanner.filter(i => i.rarity === 6).length;
   $: fiveStarCount = filteredByBanner.filter(i => i.rarity === 5).length;
   
-  // Calculate specific guarantee pulls that reset when fetching the featured character, and set the limit to 240
+  // Guarantee counter for special banners. Tracks pulls since the last copy of
+  // the featured character. First copy is guaranteed within 120 pulls; after
+  // obtaining the featured character the limit extends to 240 for the next copy.
   $: guarantee = (() => {
+    if (currentBanner.poolType !== 'E_CharacterGachaPoolType_Special' || !currentBanner.featuredCharacter) {
+      return { count: 0, limit: 120 };
+    }
+    // Sort oldest-to-newest to simulate pulls sequentially
+    const chronologicallySorted = [...filteredByBanner].sort((a, b) => Number(a.seqId) - Number(b.seqId));
     let count = 0;
     let limit = 120;
-    if (currentBanner.poolType === 'E_CharacterGachaPoolType_Special' && currentBanner.featuredCharacter) {
-      // sort from oldest to newest to simulate pulls sequentially
-      const chronologicallySorted = [...filteredByBanner].sort((a, b) => Number(a.seqId) - Number(b.seqId));
-      for (const item of chronologicallySorted) {
-        if (!item.isFree) count++;
-        if (item.charId === currentBanner.featuredCharacter) {
-          count = 0;
-          limit = 240;
-        }
+    for (const item of chronologicallySorted) {
+      if (!item.isFree) count++;
+      if (item.charId === currentBanner.featuredCharacter) {
+        count = 0;
+        limit = 240;
       }
     }
     return { count, limit };
   })();
 
-  // Calculate isolated pities: pools do not share pity between categories
-  function getPoolType(item: EndfieldGachaItem) {
-    const itemPoolNameLower = (item.poolName || '').toLowerCase();
-    const itemPoolIdLower = (item.poolId || '').toLowerCase();
-    
-    if (itemPoolIdLower.includes('standard') || itemPoolNameLower.includes('standard') || itemPoolNameLower.includes('basic headhunting')) {
-      return 'E_CharacterGachaPoolType_Standard';
-    }
-    if (itemPoolIdLower.includes('beginner') || itemPoolNameLower.includes('beginner') || itemPoolNameLower.includes('new horizons')) {
-      return 'E_CharacterGachaPoolType_Beginner';
-    }
-    return 'E_CharacterGachaPoolType_Special';
-  }
-
   let specialPity = 0;
   let standardPity = 0;
   let beginnerPity = 0;
 
-  // Compute pity for all pool types in a single pass over once-sorted items
+  // Compute pity for all pool types in a single pass over once-sorted items.
+  // Uses the unfiltered `items` array because pity is global per pool type,
+  // not scoped to the currently selected banner view.
   $: {
-    const sortedItems = [...items].sort((a, b) => Number(b.seqId) - Number(a.seqId));
+    const itemsByNewest = [...items].sort((a, b) => Number(b.seqId) - Number(a.seqId));
 
     const pityState: Record<string, { count: number; done: boolean }> = {
       E_CharacterGachaPoolType_Special: { count: 0, done: false },
@@ -85,8 +76,9 @@
       E_CharacterGachaPoolType_Beginner: { count: 0, done: false }
     };
 
-    for (const item of sortedItems) {
-      const poolType = getPoolType(item);
+    for (const item of itemsByNewest) {
+      const poolType = getPoolTypeForItem(item);
+      if (!poolType) continue;
       const state = pityState[poolType];
       if (!state || state.done) continue;
 
@@ -182,13 +174,13 @@
           <div class="flex flex-col items-center">
             <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Special Pity</p>
             <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 text-3xl">
-              {specialPity}<span class="text-zinc-400">/80</span>
+              {specialPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
             </p>
           </div>
           <div class="flex flex-col items-center">
             <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Basic Pity</p>
             <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 text-3xl">
-              {standardPity}<span class="text-zinc-400">/80</span>
+              {standardPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
             </p>
           </div>
         {:else if currentBanner.poolType !== 'E_CharacterGachaPoolType_Beginner'}
@@ -196,9 +188,9 @@
             <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Pity</p>
             <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 {currentBanner.image ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
               {#if currentBanner.poolType === 'E_CharacterGachaPoolType_Standard'}
-                {standardPity}<span class="text-zinc-400">/80</span>
+                {standardPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
               {:else}
-                {specialPity}<span class="text-zinc-400">/80</span>
+                {specialPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
               {/if}
             </p>
           </div>

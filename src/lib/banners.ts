@@ -59,6 +59,9 @@ export const KNOWN_BANNERS: BannerInfo[] = [
   },
 ];
 
+/** Hard pity limit shared across all pool types. */
+export const PITY_LIMIT = 80;
+
 /**
  * Checks whether an item belongs to a specific banner
  */
@@ -76,4 +79,15 @@ export function itemMatchesBanner(item: EndfieldGachaItem, banner: BannerInfo): 
 
   // Special banners match by label
   return itemPoolNameLower.includes(bannerLabelLower) || itemPoolIdLower === banner.id.toLowerCase();
+}
+
+/**
+ * Determines the pool type for a given gacha item by checking it against
+ * all known banners. Returns null if no match is found.
+ */
+export function getPoolTypeForItem(item: EndfieldGachaItem): string | null {
+  for (const banner of KNOWN_BANNERS) {
+    if (itemMatchesBanner(item, banner)) return banner.poolType;
+  }
+  return null;
 }
