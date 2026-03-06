@@ -9,6 +9,12 @@ export interface BannerInfo {
   poolType: string;
   label: string;
   image: string | null;
+  /**
+   * Optional ID of the featured character for this banner.
+   * Must match `EndfieldGachaItem.charId` and is typically only set for
+   * special/limited character banners used in guarantee reset logic.
+   */
+  featuredCharacter?: string;
 }
 
 /**
@@ -23,18 +29,21 @@ export const KNOWN_BANNERS: BannerInfo[] = [
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'Hues of Passion',
     image: huesOfPassion,
+    featuredCharacter: 'chr_0017_yvonne',
   },
   {
     id: 'the-floaty-messenger',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'The Floaty Messenger',
     image: theFloatyMessenger,
+    featuredCharacter: 'chr_0013_aglina',
   },
   {
     id: 'scars-of-the-forge',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'Scars of the Forge',
     image: scarsOfTheForge,
+    featuredCharacter: 'chr_0016_laevat',
   },
   {
     id: 'basic-headhunting',
@@ -49,6 +58,11 @@ export const KNOWN_BANNERS: BannerInfo[] = [
     image: newHorizons,
   },
 ];
+
+/** Hard pity limit shared across all pool types. */
+export const PITY_LIMIT = 80;
+export const GUARANTEE_LIMIT = 120;
+export const DUPLICATE_GUARANTEE_LIMIT = 240;
 
 /**
  * Checks whether an item belongs to a specific banner
@@ -67,4 +81,15 @@ export function itemMatchesBanner(item: EndfieldGachaItem, banner: BannerInfo): 
 
   // Special banners match by label
   return itemPoolNameLower.includes(bannerLabelLower) || itemPoolIdLower === banner.id.toLowerCase();
+}
+
+/**
+ * Determines the pool type for a given gacha item by checking it against
+ * all known banners. Returns null if no match is found.
+ */
+export function getPoolTypeForItem(item: EndfieldGachaItem): string | null {
+  for (const banner of KNOWN_BANNERS) {
+    if (itemMatchesBanner(item, banner)) return banner.poolType;
+  }
+  return null;
 }

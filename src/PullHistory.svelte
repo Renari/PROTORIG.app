@@ -1,7 +1,15 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
   import type { EndfieldGachaItem } from './lib/api';
-  import { KNOWN_BANNERS, itemMatchesBanner, type BannerInfo } from './lib/banners';
+  import {
+    DUPLICATE_GUARANTEE_LIMIT,
+    GUARANTEE_LIMIT,
+    KNOWN_BANNERS,
+    PITY_LIMIT,
+    getPoolTypeForItem,
+    itemMatchesBanner,
+    type BannerInfo
+  } from './lib/banners';
 
   export let items: EndfieldGachaItem[];
   export let bannerId: string = 'all';
@@ -38,7 +46,61 @@
   $: totalInView = filteredByBanner.length;
   $: sixStarCount = filteredByBanner.filter(i => i.rarity === 6).length;
   $: fiveStarCount = filteredByBanner.filter(i => i.rarity === 5).length;
+  
+  // Guarantee counter for special banners. Tracks pulls since the last copy of
+  // the featured character. First copy is guaranteed within 120 pulls; after
+  // obtaining the featured character the limit extends to 240 for the next copy.
+  $: guarantee = (() => {
+    if (currentBanner.poolType !== 'E_CharacterGachaPoolType_Special' || !currentBanner.featuredCharacter) {
+      return { count: 0, limit: GUARANTEE_LIMIT };
+    }
+    // Sort oldest-to-newest to simulate pulls sequentially
+    const chronologicallySorted = [...filteredByBanner].sort((a, b) => Number(a.seqId) - Number(b.seqId));
+    let count = 0;
+    let limit = GUARANTEE_LIMIT;
+    for (const item of chronologicallySorted) {
+      if (!item.isFree) count++;
+      if (item.charId === currentBanner.featuredCharacter) {
+        count = 0;
+        limit = DUPLICATE_GUARANTEE_LIMIT;
+      }
+    }
+    return { count, limit };
+  })();
 
+  let specialPity = 0;
+  let standardPity = 0;
+  let beginnerPity = 0;
+
+  // Compute pity for all pool types in a single pass over once-sorted items.
+  // Uses the unfiltered `items` array because pity is global per pool type,
+  // not scoped to the currently selected banner view.
+  $: {
+    const itemsByNewest = [...items].sort((a, b) => Number(b.seqId) - Number(a.seqId));
+
+    const pityState: Record<string, { count: number; done: boolean }> = {
+      E_CharacterGachaPoolType_Special: { count: 0, done: false },
+      E_CharacterGachaPoolType_Standard: { count: 0, done: false },
+      E_CharacterGachaPoolType_Beginner: { count: 0, done: false }
+    };
+
+    for (const item of itemsByNewest) {
+      const poolType = getPoolTypeForItem(item);
+      if (!poolType) continue;
+      const state = pityState[poolType];
+      if (!state || state.done) continue;
+
+      if (item.rarity === 6) {
+        state.done = true;
+      } else if (!item.isFree) {
+        state.count++;
+      }
+    }
+
+    specialPity = pityState.E_CharacterGachaPoolType_Special.count;
+    standardPity = pityState.E_CharacterGachaPoolType_Standard.count;
+    beginnerPity = pityState.E_CharacterGachaPoolType_Beginner.count;
+  }
   function formatDate(tsMs: string) {
     const d = new Date(Number(tsMs));
     return d.toLocaleString(undefined, {
@@ -76,44 +138,92 @@
     </div>
   {/if}
 
-  <!-- Banner Hero (if viewing specific banner with image) -->
-  {#if currentBanner.image}
-    <div class="rounded-2xl overflow-hidden shadow-2xl border border-zinc-700/50">
-      <img src={currentBanner.image} alt={currentBanner.label} class="w-full h-auto block" />
-    </div>
-  {:else}
-    <div class="flex items-center justify-between">
-      <h2 class="text-2xl md:text-3xl font-extrabold text-white">{currentBanner.label}</h2>
-    </div>
-  {/if}
-
-  <!-- Stats Row + Action Bar -->
-  <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-zinc-800/40 backdrop-blur-xl rounded-2xl border border-zinc-700/50 p-5 shadow-xl">
-    <div class="flex gap-6 flex-wrap">
-      <div>
-        <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Total</p>
-        <p class="text-2xl font-bold text-white">{totalInView}</p>
+  <!-- Hero and Stats Container -->
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
+    <!-- Banner Hero / Title -->
+    {#if currentBanner.image}
+      <div class="rounded-2xl overflow-hidden shadow-2xl border border-zinc-700/50 flex items-center justify-center bg-zinc-900/50">
+        <img src={currentBanner.image} alt={currentBanner.label} class="w-full h-auto object-contain block" />
       </div>
-      <div>
-        <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider">6-Star</p>
-        <p class="text-2xl font-bold text-[#ff7000] flex items-center gap-1">
-          {sixStarCount} <Icon icon="ph:star-fill" class="text-sm" />
-        </p>
-      </div>
-      <div>
-        <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider">5-Star</p>
-        <p class="text-2xl font-bold text-[#ffba03] flex items-center gap-1">
-          {fiveStarCount} <Icon icon="ph:star-fill" class="text-sm" />
-        </p>
-      </div>
-    </div>
-    {#if bannerId === 'all'}
-      <div class="flex items-center gap-3 w-full lg:w-auto mt-4 lg:mt-0">
-        <button on:click={onExport} class="flex-1 lg:flex-none justify-center bg-primary-500 hover:bg-primary-400 text-zinc-950 px-4 py-2 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-2">
-          Export
-        </button>
+    {:else}
+      <div class="flex items-center justify-between xl:col-span-2">
+        <h2 class="text-2xl md:text-3xl font-extrabold text-white">{currentBanner.label}</h2>
       </div>
     {/if}
+
+    <!-- Stats Row + Action Bar -->
+    <div class="flex flex-col {currentBanner.image ? 'justify-center p-5 xl:p-8' : 'xl:flex-row items-start xl:items-center justify-between p-5 xl:col-span-2'} bg-zinc-800/40 backdrop-blur-xl rounded-2xl border border-zinc-700/50 shadow-xl gap-4">
+      <div class="flex {currentBanner.image ? 'justify-center gap-x-6 md:gap-x-8 gap-y-6 flex-wrap w-full' : 'gap-6 flex-wrap w-full'}">
+        <!-- Primary Stats -->
+        <div class="flex flex-col items-center">
+          <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Total</p>
+          <p class="font-bold text-white {currentBanner.image ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">{totalInView}</p>
+        </div>
+        <div class="flex flex-col items-center">
+          <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider inline-flex items-center gap-0.5">6<Icon icon="ph:star-fill" class="relative -top-[1px]" /></p>
+          <p class="font-bold text-[#ff7000] flex items-center justify-center gap-1 {currentBanner.image ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
+            {sixStarCount} 
+          </p>
+        </div>
+        <div class="flex flex-col items-center">
+          <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider inline-flex items-center gap-0.5">5<Icon icon="ph:star-fill" class="relative -top-[1px]" /></p>
+          <p class="font-bold text-[#ffba03] flex items-center justify-center gap-1 {currentBanner.image ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
+            {fiveStarCount}
+          </p>
+        </div>
+        
+        <!-- Responsive Line Break: Forces new row on Desktop (side card) only -->
+        {#if currentBanner.image}
+          <div class="hidden xl:block w-full h-0"></div>
+        {/if}
+
+        <!-- Pity & Guarantee Stats -->
+        {#if bannerId === 'all'}
+          <div class="flex flex-col items-center">
+            <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Special Pity</p>
+            <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 text-3xl">
+              {specialPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
+            </p>
+          </div>
+          <div class="flex flex-col items-center">
+            <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Basic Pity</p>
+            <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 text-3xl">
+              {standardPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
+            </p>
+          </div>
+        {:else if currentBanner.poolType !== 'E_CharacterGachaPoolType_Beginner'}
+          <div class="flex flex-col items-center">
+            <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Pity</p>
+            <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 {currentBanner.image ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
+              {#if currentBanner.poolType === 'E_CharacterGachaPoolType_Standard'}
+                {standardPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
+              {:else}
+                {specialPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
+              {/if}
+            </p>
+          </div>
+          {#if currentBanner.poolType === 'E_CharacterGachaPoolType_Special'}
+            <div class="flex flex-col items-center">
+              <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Guarantee</p>
+              <p class="font-bold text-[#ef4444] flex items-baseline justify-center gap-0.5 {currentBanner.image ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
+                {#if currentBanner.featuredCharacter}
+                  {guarantee.count}<span class="text-zinc-400">/{guarantee.limit}</span>
+                {:else}
+                  <span class="text-zinc-400">N/A</span>
+                {/if}
+              </p>
+            </div>
+          {/if}
+        {/if}
+      </div>
+      {#if bannerId === 'all'}
+        <div class="flex items-center gap-3 w-full xl:w-auto mt-4 xl:mt-0">
+          <button on:click={onExport} class="flex-1 xl:flex-none justify-center bg-primary-500 hover:bg-primary-400 text-zinc-950 px-4 py-2 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-2">
+            Export
+          </button>
+        </div>
+      {/if}
+    </div>
   </div>
 
   <!-- Rarity Filter -->
