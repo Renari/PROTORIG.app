@@ -2,7 +2,7 @@ import huesOfPassion from '../assets/hues-of-passion.jpg';
 import scarsOfTheForge from '../assets/scars-of-the-forge.jpg';
 import theFloatyMessenger from '../assets/the-floaty-messenger.jpg';
 import newHorizons from '../assets/new-horizons.png';
-import type { EndfieldGachaItem } from './api';
+import type { GachaRecordItem } from './api';
 
 export interface BannerInfo {
   id: string;
@@ -64,10 +64,14 @@ export const PITY_LIMIT = 80;
 export const GUARANTEE_LIMIT = 120;
 export const DUPLICATE_GUARANTEE_LIMIT = 240;
 
+export const WEAPON_PITY_LIMIT = 40;
+export const WEAPON_GUARANTEE_LIMIT = 80;
+export const WEAPON_DUPLICATE_GUARANTEE_LIMIT = 100;
+
 /**
  * Checks whether an item belongs to a specific banner
  */
-export function itemMatchesBanner(item: EndfieldGachaItem, banner: BannerInfo): boolean {
+export function itemMatchesBanner(item: GachaRecordItem, banner: BannerInfo): boolean {
   const itemPoolNameLower = (item.poolName || '').toLowerCase();
   const itemPoolIdLower = (item.poolId || '').toLowerCase();
   const bannerLabelLower = banner.label.toLowerCase();
@@ -87,7 +91,7 @@ export function itemMatchesBanner(item: EndfieldGachaItem, banner: BannerInfo): 
  * Determines the pool type for a given gacha item by checking it against
  * all known banners. Returns null if no match is found.
  */
-export function getPoolTypeForItem(item: EndfieldGachaItem): string | null {
+export function getPoolTypeForItem(item: GachaRecordItem): string | null {
   for (const banner of KNOWN_BANNERS) {
     if (itemMatchesBanner(item, banner)) return banner.poolType;
   }

@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import Icon from '@iconify/svelte';
   import he from 'he';
-  import { fetchAllPulls, type EndfieldGachaItem } from './lib/api';
+  import { fetchAllCharacters, fetchWeaponPools, fetchAllWeapons, type EndfieldGachaCharacter, type EndfieldGachaWeapon } from './lib/api';
   import { exportEGF } from './lib/egf';
   import Sidebar from './Sidebar.svelte';
   import PullHistory from './PullHistory.svelte';
@@ -18,18 +18,32 @@
   let lang = '';
   let isFetching = false;
   let errorMsg = '';
-  let fetchedItems: EndfieldGachaItem[] = [];
+  let fetchedCharacters: EndfieldGachaCharacter[] = [];
+  let fetchedWeapons: EndfieldGachaWeapon[] = [];
   let fetchingStatus = '';
 
-  $: hasData = fetchedItems.length > 0;
+  $: hasCharacters = fetchedCharacters && fetchedCharacters.length > 0;
+  $: hasWeapons = fetchedWeapons && fetchedWeapons.length > 0;
+  $: hasData = hasCharacters || hasWeapons;
 
   onMount(() => {
     const cached = localStorage.getItem(STORAGE_KEY);
     if (cached) {
       try {
-        fetchedItems = JSON.parse(cached);
-        if (fetchedItems.length > 0) {
-          currentPage = 'pulls';
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          // Legacy array-based storage: only contains characters
+          fetchedCharacters = parsed;
+          fetchedWeapons = [];
+          if (fetchedCharacters.length > 0) saveToStorage(fetchedCharacters, fetchedWeapons);
+        } else {
+          // New object-based storage
+          fetchedCharacters = parsed.characters || [];
+          fetchedWeapons = parsed.weapons || [];
+        }
+        
+        if (fetchedCharacters.length > 0 || fetchedWeapons.length > 0) {
+          currentPage = 'all-headhunts';
         }
       } catch {
         localStorage.removeItem(STORAGE_KEY);
@@ -37,13 +51,14 @@
     }
   });
 
-  function saveToStorage(items: EndfieldGachaItem[]) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  function saveToStorage(characters: EndfieldGachaCharacter[], weapons: EndfieldGachaWeapon[]) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ characters, weapons }));
   }
 
   function clearStorage() {
     localStorage.removeItem(STORAGE_KEY);
-    fetchedItems = [];
+    fetchedCharacters = [];
+    fetchedWeapons = [];
     currentPage = 'import';
   }
 
@@ -90,27 +105,41 @@
     startFetching(token, serverId, lang);
   }
 
-  async function startFetching(currentToken: string, serverId: string, lang: string) {
+  function startFetching(currentToken: string, serverId: string, lang: string) {
     isFetching = true;
     errorMsg = '';
-    fetchedItems = [];
+    fetchedCharacters = [];
+    fetchedWeapons = [];
     fetchingStatus = 'Initializing secure WebAssembly proxy...';
-    try {
-      fetchedItems = await fetchAllPulls(currentToken, serverId, lang, (pool, count) => {
-        fetchingStatus = `Scanning ${pool} pool... Found ${count} pulls so far.`;
+
+    fetchAllCharacters(currentToken, serverId, lang, (pool, count) => {
+      fetchingStatus = `Scanning character pool ${pool}... Found ${count} pulls.`;
+    })
+    .then((chars) => {
+      fetchedCharacters = chars;
+      return fetchWeaponPools(currentToken, serverId, lang);
+    })
+    .then((pools) => {
+      return fetchAllWeapons(currentToken, serverId, lang, pools, (poolName: string, count: number) => {
+        fetchingStatus = `Scanning weapon pool ${poolName}... Found ${count} pulls.`;
       });
-      saveToStorage(fetchedItems);
-      currentPage = 'pulls';
-    } catch (err: any) {
+    })
+    .then((weaps) => {
+      fetchedWeapons = weaps;
+      saveToStorage(fetchedCharacters, fetchedWeapons);
+      currentPage = 'all-headhunts';
+    })
+    .catch((err: any) => {
       errorMsg = err.message || 'Failed to fetch the pulls using the provided token.';
-    } finally {
+    })
+    .finally(() => {
       isFetching = false;
       fetchingStatus = '';
-    }
+    });
   }
 
   function handleExport() {
-    exportEGF(fetchedItems);
+    exportEGF(fetchedCharacters, fetchedWeapons);
   }
 
   // Extract banner ID from page string like 'banner:hues-of-passion'
@@ -133,7 +162,8 @@
 
   <Sidebar
     {currentPage}
-    items={fetchedItems}
+    characters={fetchedCharacters}
+    weapons={fetchedWeapons}
     onNavigate={handleNavigate}
     isOpen={sidebarOpen}
     onClose={() => sidebarOpen = false}
@@ -216,17 +246,18 @@
             <div class="mt-6 bg-zinc-800/80 border border-zinc-700 rounded-xl p-4 max-w-2xl flex items-center gap-3 shadow-md">
               <Icon icon="ph:check-circle-duotone" class="text-zinc-400 text-xl flex-shrink-0" />
               <p class="text-sm text-zinc-300">
-                You already have <strong>{fetchedItems.length}</strong> pulls stored locally.
+                You already have <strong>{fetchedCharacters.length + fetchedWeapons.length}</strong> pulls stored locally.
                 Importing again will replace your existing data.
               </p>
             </div>
           {/if}
         </div>
 
-      {:else if currentPage === 'pulls' || currentPage.startsWith('banner:')}
+      {:else if currentPage === 'all-headhunts' || currentPage.startsWith('banner:') || currentPage === 'all-arsenal-issues' || currentPage.startsWith('weapon-banner:')}
         <!-- Pull History View -->
         <PullHistory
-          items={fetchedItems}
+          items={currentPage.startsWith('weapon-banner:') || currentPage === 'all-arsenal-issues' ? fetchedWeapons : fetchedCharacters}
+          isWeaponView={currentPage.startsWith('weapon-banner:') || currentPage === 'all-arsenal-issues'}
           bannerId={activeBannerId}
           onExport={handleExport}
         />

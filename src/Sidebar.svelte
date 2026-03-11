@@ -2,15 +2,17 @@
   import { onMount } from 'svelte';
   import Icon from '@iconify/svelte';
   import { KNOWN_BANNERS, itemMatchesBanner, type BannerInfo } from './lib/banners';
-  import type { EndfieldGachaItem } from './lib/api';
+  import type { EndfieldGachaCharacter, EndfieldGachaWeapon } from './lib/api';
 
-  export let items: EndfieldGachaItem[];
+  export let characters: EndfieldGachaCharacter[];
+  export let weapons: EndfieldGachaWeapon[];
   export let currentPage: string;
   export let onNavigate: (page: string) => void;
   export let isOpen: boolean = false;
   export let onClose: () => void = () => {};
   
-  $: hasData = items && items.length > 0;
+  $: hasCharacters = characters && characters.length > 0;
+  $: hasWeapons = weapons && weapons.length > 0;
 
   let kofiHtml = '';
 
@@ -52,11 +54,14 @@
     label: string;
     icon: string;
     requiresData?: boolean;
+    requiresCharacters?: boolean;
+    requiresWeapons?: boolean;
   }
 
   const mainNav: NavItem[] = [
     { id: 'import', label: 'Import', icon: 'ph:download-simple-bold' },
-    { id: 'pulls', label: 'All Headhunting', icon: 'ph:list-bullets-bold', requiresData: true },
+    { id: 'all-headhunts', label: 'All Headhunting', icon: 'ph:list-bullets-bold', requiresCharacters: true },
+    { id: 'all-arsenal-issues', label: 'All Arsenal Issues', icon: 'ph:sword-bold', requiresWeapons: true },
   ];
 
   function isNavActive(page: string, itemId: string): boolean {
@@ -93,7 +98,7 @@
     <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-3 mb-2">Navigation</p>
     {#each mainNav as item}
       {@const active = isNavActive(currentPage, item.id)}
-      {@const disabled = item.requiresData && !hasData}
+      {@const disabled = (item.requiresCharacters && !hasCharacters) || (item.requiresWeapons && !hasWeapons)}
       <button
         on:click={() => handleNav(item.id)}
         {disabled}
@@ -110,7 +115,7 @@
     {/each}
 
     <div class="pt-4">
-      <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-3 mb-2">Banners</p>
+      <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-3 mb-2">Headhunt</p>
       {#each bannerCategories as cat (cat.id)}
         {@const bannerActive = currentPage === `banner:${cat.id}`}
         {@const knownBanner = KNOWN_BANNERS.find(b => b.id === cat.id)}
