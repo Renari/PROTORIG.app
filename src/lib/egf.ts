@@ -1,4 +1,4 @@
-import type { EndfieldGachaItem } from './api';
+import type { EndfieldGachaCharacter, EndfieldGachaWeapon } from './api';
 
 export interface EGFInfo {
   uid: string;
@@ -11,10 +11,12 @@ export interface EGFInfo {
 
 export interface EGFExport {
   info: EGFInfo;
-  list: EndfieldGachaItem[];
+  characters?: EndfieldGachaCharacter[];
+  weapons?: EndfieldGachaWeapon[];
+  list?: EndfieldGachaCharacter[]; // Legacy support
 }
 
-export function exportEGF(items: EndfieldGachaItem[]) {
+export function exportEGF(characters: EndfieldGachaCharacter[], weapons: EndfieldGachaWeapon[]) {
   // Try to find the user's UID or stick to an empty string. The auth API does not expose it
   const exportData: EGFExport = {
     info: {
@@ -23,9 +25,10 @@ export function exportEGF(items: EndfieldGachaItem[]) {
       game_id: 'endfield',
       export_timestamp: Math.floor(Date.now() / 1000),
       export_app: 'PROTORIG.app',
-      export_app_version: 'v1.0.0'
+      export_app_version: 'v2.0.0'
     },
-    list: items
+    characters,
+    weapons
   };
 
   const jsonString = JSON.stringify(exportData, null, 2);
