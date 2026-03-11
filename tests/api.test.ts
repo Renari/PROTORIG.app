@@ -1,7 +1,7 @@
 /**
  * @vitest-environment node
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'vitest';
 import he from 'he';
 import { config } from 'dotenv';
 config();
@@ -10,13 +10,9 @@ const VITE_API_CHAR_URL = 'https://ef-webview.gryphline.com/api/record/char';
 const VITE_API_WEAPON_POOL_URL = 'https://ef-webview.gryphline.com/api/record/weapon/pool';
 const VITE_API_WEAPON_URL = 'https://ef-webview.gryphline.com/api/record/weapon';
 
-describe('Endfield API Fetching via Native Node Fetch (Diagnostics)', () => {
+describe.skipIf(!process.env.U8_TOKEN)('Endfield API Fetching via Native Node Fetch (Diagnostics)', () => {
   it('Should successfully fetch pulls', async () => {
-    const rawToken = process.env.U8_TOKEN;
-    if (!rawToken) {
-      console.warn('Skipping API test: U8_TOKEN not found in .env');
-      return;
-    }
+    const rawToken = process.env.U8_TOKEN!;
 
     const token = decodeURIComponent(he.decode(rawToken));
     console.log('Starting fetch with token:', token.substring(0, 10) + '...');
