@@ -1,3 +1,4 @@
+import riversDaughter from '../assets/rivers-daughter.jpg';
 import huesOfPassion from '../assets/hues-of-passion.jpg';
 import scarsOfTheForge from '../assets/scars-of-the-forge.jpg';
 import theFloatyMessenger from '../assets/the-floaty-messenger.jpg';
@@ -24,6 +25,13 @@ export interface BannerInfo {
  * This list must be sorted from the most recent banner to the least recent banner.
  */
 export const KNOWN_BANNERS: BannerInfo[] = [
+  {
+    id: 'rivers-daughter',
+    poolType: 'E_CharacterGachaPoolType_Special',
+    label: 'River\'s Daughter',
+    image: riversDaughter,
+    featuredCharacter: '',
+  },
   {
     id: 'hues-of-passion',
     poolType: 'E_CharacterGachaPoolType_Special',
