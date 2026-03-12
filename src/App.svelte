@@ -7,7 +7,9 @@
   import Sidebar from './Sidebar.svelte';
   import PullHistory from './PullHistory.svelte';
 
+  const LINUX_SH = 'https://raw.githubusercontent.com/Renari/PROTORIG.app/76138d03b71ad231036f3f85b8aad9416d4e7d35/scripts/linux.sh'
   const STORAGE_KEY = 'protorig_app_pulls';
+  const WINDOWS_PS1 = 'https://raw.githubusercontent.com/Renari/PROTORIG.app/92aef8a6629b9be60e0f80292f19c6a67d515185/scripts/windows.ps1'
 
   let currentPage = 'import';
   let sidebarOpen = false;
@@ -296,11 +298,11 @@
                     <li>Paste the following command and press Enter:</li>
                   </ol>
                   <div class="relative group">
-                    <pre class="bg-zinc-900/80 border border-zinc-700 rounded-xl px-4 py-3 text-xs text-zinc-300 overflow-x-auto font-mono select-all">irm https://raw.githubusercontent.com/Renari/PROTORIG.app/92aef8a6629b9be60e0f80292f19c6a67d515185/scripts/windows.ps1 | iex</pre>
+                    <pre class="bg-zinc-900/80 border border-zinc-700 rounded-xl px-4 py-3 text-xs text-zinc-300 overflow-x-auto font-mono select-all">irm {WINDOWS_PS1} | iex</pre>
                   </div>
                   <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 flex items-start gap-3">
                     <Icon icon="ph:warning-duotone" class="text-lg text-amber-400 flex-shrink-0 mt-0.5" />
-                    <p class="text-xs text-amber-300/90 leading-relaxed">Running scripts from the internet can be dangerous. You should <a href="https://raw.githubusercontent.com/Renari/PROTORIG.app/76138d03b71ad231036f3f85b8aad9416d4e7d35/scripts/windows.ps1" target="_blank" rel="noopener noreferrer" class="underline text-amber-200 hover:text-white">review the script</a> or have someone you trust review it before running.</p>
+                    <p class="text-xs text-amber-300/90 leading-relaxed">Running scripts from the internet can be dangerous. You should <a href="{WINDOWS_PS1}" target="_blank" rel="noopener noreferrer" class="underline text-amber-200 hover:text-white">review the script</a> or have someone you trust review it before running.</p>
                   </div>
                   <ol start="3" class="list-decimal list-inside text-sm text-zinc-400 space-y-2 leading-relaxed">
                     <li>The URL will be extracted and copied to your clipboard</li>
@@ -416,11 +418,11 @@
                     <li>Run the following command:</li>
                   </ol>
                   <div class="relative group">
-                    <pre class="bg-zinc-900/80 border border-zinc-700 rounded-xl px-4 py-3 text-xs text-zinc-300 overflow-x-auto font-mono select-all">curl -s https://raw.githubusercontent.com/Renari/PROTORIG.app/76138d03b71ad231036f3f85b8aad9416d4e7d35/scripts/linux.sh | bash</pre>
+                    <pre class="bg-zinc-900/80 border border-zinc-700 rounded-xl px-4 py-3 text-xs text-zinc-300 overflow-x-auto font-mono select-all">curl -s {LINUX_SH} | bash</pre>
                   </div>
                   <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 flex items-start gap-3">
                     <Icon icon="ph:warning-duotone" class="text-lg text-amber-400 flex-shrink-0 mt-0.5" />
-                    <p class="text-xs text-amber-300/90 leading-relaxed">Running scripts from the internet can be dangerous. You should <a href="https://raw.githubusercontent.com/Renari/PROTORIG.app/76138d03b71ad231036f3f85b8aad9416d4e7d35/scripts/linux.sh" target="_blank" rel="noopener noreferrer" class="underline text-amber-200 hover:text-white">review the script</a> or have someone you trust review it before running.</p>
+                    <p class="text-xs text-amber-300/90 leading-relaxed">Running scripts from the internet can be dangerous. You should <a href="{LINUX_SH}" target="_blank" rel="noopener noreferrer" class="underline text-amber-200 hover:text-white">review the script</a> or have someone you trust review it before running.</p>
                   </div>
                   <ol start="3" class="list-decimal list-inside text-sm text-zinc-400 space-y-2 leading-relaxed">
                     <li>The script will search common Wine/Proton prefix locations for the <strong class="text-zinc-200">data_1</strong> file</li>
