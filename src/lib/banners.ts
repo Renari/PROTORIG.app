@@ -30,7 +30,7 @@ export const KNOWN_BANNERS: BannerInfo[] = [
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'River\'s Daughter',
     image: riversDaughter,
-    featuredCharacter: '',
+    featuredCharacter: 'chr_0027_tangtang',
   },
   {
     id: 'hues-of-passion',
