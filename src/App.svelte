@@ -296,7 +296,7 @@
                     <li>Paste the following command and press Enter:</li>
                   </ol>
                   <div class="relative group">
-                    <pre class="bg-zinc-900/80 border border-zinc-700 rounded-xl px-4 py-3 text-xs text-zinc-300 overflow-x-auto font-mono select-all">irm https://raw.githubusercontent.com/Renari/PROTORIG.app/76138d03b71ad231036f3f85b8aad9416d4e7d35/scripts/windows.ps1 | iex</pre>
+                    <pre class="bg-zinc-900/80 border border-zinc-700 rounded-xl px-4 py-3 text-xs text-zinc-300 overflow-x-auto font-mono select-all">irm https://raw.githubusercontent.com/Renari/PROTORIG.app/92aef8a6629b9be60e0f80292f19c6a67d515185/scripts/windows.ps1 | iex</pre>
                   </div>
                   <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 flex items-start gap-3">
                     <Icon icon="ph:warning-duotone" class="text-lg text-amber-400 flex-shrink-0 mt-0.5" />
