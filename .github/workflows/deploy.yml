@@ -24,6 +24,7 @@ jobs:
       - name: Build
         env:
           NODE_ENV: production
+          VITE_WISP_URL: wss://protorig.app:8443
         run: npm run build
       - name: Deploy
         uses: easingthemes/ssh-deploy@v5.1.1
