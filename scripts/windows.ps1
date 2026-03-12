@@ -8,7 +8,13 @@ if (-not (Test-Path $cachePath)) {
 
 Write-Host "Reading $cachePath..."
 
-$bytes = [System.IO.File]::ReadAllBytes($cachePath)
+$stream = [System.IO.File]::Open($cachePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+try {
+    $bytes = New-Object byte[] $stream.Length
+    [void]$stream.Read($bytes, 0, $bytes.Length)
+} finally {
+    $stream.Close()
+}
 $text = [System.Text.Encoding]::UTF8.GetString($bytes)
 
 $text = $text -replace '\\u0026', '&'
