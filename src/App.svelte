@@ -12,7 +12,7 @@
   let currentPage = 'import';
   let sidebarOpen = false;
 
-  let urlInput = '';
+  let selectedFile: File | null = null;
   let token = '';
   let serverId = '';
   let lang = '';
@@ -70,39 +70,77 @@
     currentPage = 'import';
   }
 
-  function handleUrlSubmit() {
-    errorMsg = '';
-    const input = urlInput.trim();
+  function findNewestTokenUrl(input: string): string | null {
+    const normalized = input
+      .replaceAll('\\u0026', '&')
+      .replaceAll('\\/', '/')
+      .replaceAll('&amp;', '&');
 
-    // Attempt to parse as a full URL first
-    let url: URL | null = null;
-    try {
-      url = new URL(input);
-    } catch {
-      // Not a valid URL — fall through to raw token handling below
+    const urlRegex = /https?:\/\/[^\s"'<>\\]+/gi;
+    const matches = Array.from(normalized.matchAll(urlRegex));
+    const tokenUrls = matches
+      .map((m) => m[0])
+      .filter((url): url is string => !!url && url.includes('u8_token='));
+
+    return tokenUrls.length > 0 ? tokenUrls[tokenUrls.length - 1] : null;
+  }
+
+  function parseImportUrl(inputUrl: string): { token: string; serverId: string; lang: string } {
+    const parsedUrl = new URL(inputUrl);
+    const u8Token = parsedUrl.searchParams.get('u8_token');
+
+    if (!u8Token) {
+      throw new Error('Could not find u8_token in the selected file.');
     }
 
-    if (url) {
-      const u8Token = url.searchParams.get('u8_token');
-      if (!u8Token) {
-        errorMsg = 'Could not find u8_token in the provided URL.';
-        return;
-      }
+    return {
+      token: decodeURIComponent(he.decode(u8Token)),
+      serverId: parsedUrl.searchParams.get('server') || '3',
+      lang: parsedUrl.searchParams.get('lang') || 'en-us'
+    };
+  }
 
-      serverId = url.searchParams.get('server') || '3';
-      lang = url.searchParams.get('lang') || 'en-us';
-      token = decodeURIComponent(he.decode(u8Token));
-    } else if (input.length > 20 && !input.includes(' ')) {
-      // Treat the raw input as a bare token (no URL wrapping)
-      token = decodeURIComponent(he.decode(input));
-      serverId = '3';
-      lang = 'en-us';
-    } else {
-      errorMsg = 'Invalid input format. Please paste the entire URL beginning with https://';
+  async function handleFileSubmit() {
+    errorMsg = '';
+
+    if (!selectedFile) {
+      errorMsg = 'Please select the data_1 file before importing.';
       return;
     }
 
-    startFetching(token, serverId, lang);
+    try {
+      const buffer = await selectedFile.arrayBuffer();
+      const decoders = [
+        new TextDecoder('utf-8'),
+        new TextDecoder('utf-16le'),
+        new TextDecoder('latin1')
+      ];
+
+      let extractedUrl: string | null = null;
+      for (const decoder of decoders) {
+        extractedUrl = findNewestTokenUrl(decoder.decode(buffer));
+        if (extractedUrl) break;
+      }
+
+      if (!extractedUrl) {
+        throw new Error('No URL containing u8_token was found in the selected data_1 file.');
+      }
+
+      const parsed = parseImportUrl(extractedUrl);
+      token = parsed.token;
+      serverId = parsed.serverId;
+      lang = parsed.lang;
+
+      startFetching(token, serverId, lang);
+    } catch (err: any) {
+      errorMsg = err.message || 'Failed to read the selected file.';
+    }
+  }
+
+  function handleFileChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    selectedFile = input.files?.[0] || null;
+    errorMsg = '';
   }
 
   function startFetching(currentToken: string, serverId: string, lang: string) {
@@ -196,22 +234,35 @@
               Import <span class="text-zinc-300">Headhunt History</span>
             </h1>
             <p class="text-zinc-400 text-sm md:text-base font-medium max-w-xl leading-relaxed">
-              Paste your headhunt record URL to fetch and store your headhunt history locally.
+              Select the binary <strong>data_1</strong> file to extract your u8_token URL and fetch your headhunt history locally.
               Data is routed securely via end-to-end TLS WebAssembly proxy.
+            </p>
+            <p class="mt-3 text-zinc-500 text-xs md:text-sm font-medium">
+              File location: AppData/Local/PlatformProcess/Cache/data_1
             </p>
           </header>
 
           <div class="bg-zinc-800/40 backdrop-blur-xl rounded-2xl border border-zinc-700/50 p-6 md:p-8 shadow-2xl max-w-2xl">
             <div class="space-y-5">
               <div>
-                <label for="url-input" class="block text-xs font-bold tracking-wide text-zinc-500 uppercase mb-2">Record URL</label>
-                <textarea
-                  bind:value={urlInput}
-                  id="url-input"
-                  rows="4"
-                  class="w-full bg-zinc-900/60 border border-zinc-700 rounded-xl px-4 py-3.5 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-500/50 focus:border-zinc-500 transition-all duration-200 resize-none shadow-inner text-sm"
-                  placeholder="Paste your URL here... e.g., https://ef-webview.gryphline.com/page/gacha_char?pool_id=..."
-                ></textarea>
+                <label
+                  for="data-file-input"
+                  class="flex flex-col items-center justify-center gap-3 w-full bg-zinc-900/60 border-2 border-dashed border-zinc-700 rounded-xl px-4 py-8 cursor-pointer hover:border-zinc-500 hover:bg-zinc-900/80 transition-all duration-200"
+                >
+                  {#if selectedFile}
+                    <Icon icon="ph:file-duotone" class="text-3xl text-primary-500" />
+                    <span class="text-sm text-zinc-300 font-medium">{selectedFile.name}</span>
+                  {:else}
+                    <Icon icon="ph:upload-simple-bold" class="text-3xl text-zinc-500" />
+                    <span class="text-sm text-zinc-400">Click to select <strong>data_1</strong></span>
+                  {/if}
+                </label>
+                <input
+                  id="data-file-input"
+                  type="file"
+                  on:change={handleFileChange}
+                  class="hidden"
+                />
               </div>
 
               {#if errorMsg}
@@ -222,8 +273,8 @@
               {/if}
 
               <button
-                on:click={handleUrlSubmit}
-                disabled={isFetching || !urlInput}
+                on:click={handleFileSubmit}
+                disabled={isFetching || !selectedFile}
                 class="w-full relative overflow-hidden bg-primary-600 hover:bg-primary-500 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-zinc-950 font-bold py-3.5 px-6 rounded-xl transition-all duration-300 active:scale-[0.98] shadow-lg shadow-black/20 disabled:shadow-none flex flex-col items-center justify-center gap-1.5 border border-primary-500/50 disabled:border-transparent"
               >
                 {#if isFetching}
