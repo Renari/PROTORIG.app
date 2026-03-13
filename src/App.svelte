@@ -7,9 +7,9 @@
   import Sidebar from './Sidebar.svelte';
   import PullHistory from './PullHistory.svelte';
 
-  const LINUX_SH = 'https://raw.githubusercontent.com/Renari/PROTORIG.app/76138d03b71ad231036f3f85b8aad9416d4e7d35/scripts/linux.sh'
+  const LINUX_SH = window.location.origin + '/scripts/linux.sh'
   const STORAGE_KEY = 'protorig_app_pulls';
-  const WINDOWS_PS1 = 'https://raw.githubusercontent.com/Renari/PROTORIG.app/92aef8a6629b9be60e0f80292f19c6a67d515185/scripts/windows.ps1'
+  const WINDOWS_PS1 = window.location.origin + '/scripts/windows.ps1'
 
   let currentPage = 'import';
   let sidebarOpen = false;
