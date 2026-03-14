@@ -2,6 +2,7 @@
  * @vitest-environment node
  */
 import { describe, it } from 'vitest';
+// @ts-ignore
 import he from 'he';
 import { config } from 'dotenv';
 config();

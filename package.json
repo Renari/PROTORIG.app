@@ -4,11 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "conc 'vite' 'DEVELOPMENT=true node wisp-server.mjs'",
     "build": "vite build && bun build wisp-server.mjs --compile --outfile ./dist/wisp-server",
     "preview": "vite preview",
     "test": "vitest run",
-    "wisp": "DEVELOPMENT=true node wisp-server.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
   },
   "devDependencies": {
@@ -21,6 +20,7 @@
     "@types/node": "^24.10.1",
     "autoprefixer": "^10.4.27",
     "bun": "^1.3.10",
+    "concurrently": "^9.2.1",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
