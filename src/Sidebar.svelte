@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { KNOWN_BANNERS } from './lib/banners';
   import { onMount } from 'svelte';
+  import githubLogo from './assets/GitHub_Lockup_White.png';
   import Icon from '@iconify/svelte';
-  import { KNOWN_BANNERS, itemMatchesBanner, type BannerInfo } from './lib/banners';
   import type { EndfieldGachaCharacter, EndfieldGachaWeapon } from './lib/api';
 
   export let characters: EndfieldGachaCharacter[];
@@ -135,7 +136,10 @@
   </nav>
 
   <!-- Bottom actions -->
-  <div class="p-3 border-t border-zinc-700/50 flex justify-center items-center">
+  <div class="p-4 border-t border-zinc-700/50 flex flex-col justify-center items-center gap-4">
+    <a href="https://github.com/Renari/PROTORIG.app" target="_blank" rel="noopener noreferrer" class="opacity-70 hover:opacity-100 transition-opacity">
+      <img src={githubLogo} alt="GitHub Repository" class="h-8 w-auto" />
+    </a>
     {#if kofiHtml}
       {@html kofiHtml}
     {/if}

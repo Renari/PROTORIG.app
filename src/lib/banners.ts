@@ -1,8 +1,8 @@
-import riversDaughter from '../assets/rivers-daughter.jpg';
-import huesOfPassion from '../assets/hues-of-passion.jpg';
-import scarsOfTheForge from '../assets/scars-of-the-forge.jpg';
-import theFloatyMessenger from '../assets/the-floaty-messenger.jpg';
-import newHorizons from '../assets/new-horizons.png';
+import riversDaughter from '../assets/banners/rivers-daughter.jpg';
+import huesOfPassion from '../assets/banners/hues-of-passion.jpg';
+import scarsOfTheForge from '../assets/banners/scars-of-the-forge.jpg';
+import theFloatyMessenger from '../assets/banners/the-floaty-messenger.jpg';
+import newHorizons from '../assets/banners/new-horizons.png';
 import type { GachaRecordItem } from './api';
 
 export interface BannerInfo {
