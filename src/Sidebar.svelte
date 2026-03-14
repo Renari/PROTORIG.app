@@ -82,7 +82,7 @@
   <!-- Logo / Branding -->
   <div class="flex items-center justify-between px-5 py-5 border-b border-zinc-700/50">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center flex-shrink-0 shadow-lg shadow-black/20 overflow-hidden">
+      <div class="w-10 h-10 flex items-center justify-center flex-shrink-0 overflow-hidden">
         <img src="/protorig.png" alt="Protorig Logo" class="w-full h-full object-cover" />
       </div>
       <div>
