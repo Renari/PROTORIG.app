@@ -71,8 +71,8 @@
   
   const bannerCategories = [
     { id: 'special-headhunting', label: 'Special Headhunting' },
-    { id: 'basic-headhunting', label: 'Basic Headhunting' },
-    { id: 'new-horizons', label: 'New Horizons' }
+    { id: 'standard', label: 'Basic Headhunting' },
+    { id: 'beginner', label: 'New Horizons' }
   ];
 </script>
 
