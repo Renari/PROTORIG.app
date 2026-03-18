@@ -12,7 +12,7 @@ export interface BannerInfo {
   image: string | null;
   /**
    * Optional ID of the featured character for this banner.
-   * Must match `EndfieldGachaItem.charId` and is typically only set for
+   * Must match `EndfieldGachaCharacter.charId` and is typically only set for
    * special/limited character banners used in guarantee reset logic.
    */
   featuredCharacter?: string;
@@ -26,41 +26,41 @@ export interface BannerInfo {
  */
 export const KNOWN_BANNERS: BannerInfo[] = [
   {
-    id: 'rivers-daughter',
+    id: 'special_1_1_1',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'River\'s Daughter',
     image: riversDaughter,
     featuredCharacter: 'chr_0027_tangtang',
   },
   {
-    id: 'hues-of-passion',
+    id: 'special_1_0_2',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'Hues of Passion',
     image: huesOfPassion,
     featuredCharacter: 'chr_0017_yvonne',
   },
   {
-    id: 'the-floaty-messenger',
+    id: 'special_1_0_3',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'The Floaty Messenger',
     image: theFloatyMessenger,
     featuredCharacter: 'chr_0013_aglina',
   },
   {
-    id: 'scars-of-the-forge',
+    id: 'special_1_0_1',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'Scars of the Forge',
     image: scarsOfTheForge,
     featuredCharacter: 'chr_0016_laevat',
   },
   {
-    id: 'basic-headhunting',
+    id: 'standard',
     poolType: 'E_CharacterGachaPoolType_Standard',
     label: 'Basic Headhunting',
     image: null,
   },
   {
-    id: 'new-horizons',
+    id: 'beginner',
     poolType: 'E_CharacterGachaPoolType_Beginner',
     label: 'New Horizons',
     image: newHorizons,
