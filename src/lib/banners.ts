@@ -1,18 +1,13 @@
-import riversDaughter from '../assets/banners/rivers-daughter.jpg';
-import huesOfPassion from '../assets/banners/hues-of-passion.jpg';
-import scarsOfTheForge from '../assets/banners/scars-of-the-forge.jpg';
-import theFloatyMessenger from '../assets/banners/the-floaty-messenger.jpg';
-import newHorizons from '../assets/banners/new-horizons.png';
 import type { GachaRecordItem } from './api';
 
 export interface BannerInfo {
   id: string;
   poolType: string;
   label: string;
-  image: string | null;
+  hasImage: boolean;
   /**
    * Optional ID of the featured character for this banner.
-   * Must match `EndfieldGachaItem.charId` and is typically only set for
+   * Must match `EndfieldGachaCharacter.charId` and is typically only set for
    * special/limited character banners used in guarantee reset logic.
    */
   featuredCharacter?: string;
@@ -26,44 +21,44 @@ export interface BannerInfo {
  */
 export const KNOWN_BANNERS: BannerInfo[] = [
   {
-    id: 'rivers-daughter',
+    id: 'special_1_1_1',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'River\'s Daughter',
-    image: riversDaughter,
     featuredCharacter: 'chr_0027_tangtang',
+    hasImage: true,
   },
   {
-    id: 'hues-of-passion',
+    id: 'special_1_0_2',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'Hues of Passion',
-    image: huesOfPassion,
     featuredCharacter: 'chr_0017_yvonne',
+    hasImage: true,
   },
   {
-    id: 'the-floaty-messenger',
+    id: 'special_1_0_3',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'The Floaty Messenger',
-    image: theFloatyMessenger,
     featuredCharacter: 'chr_0013_aglina',
+    hasImage: true,
   },
   {
-    id: 'scars-of-the-forge',
+    id: 'special_1_0_1',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'Scars of the Forge',
-    image: scarsOfTheForge,
     featuredCharacter: 'chr_0016_laevat',
+    hasImage: true,
   },
   {
-    id: 'basic-headhunting',
+    id: 'standard',
     poolType: 'E_CharacterGachaPoolType_Standard',
     label: 'Basic Headhunting',
-    image: null,
+    hasImage: false,
   },
   {
-    id: 'new-horizons',
+    id: 'beginner',
     poolType: 'E_CharacterGachaPoolType_Beginner',
     label: 'New Horizons',
-    image: newHorizons,
+    hasImage: true,
   },
 ];
 
@@ -80,8 +75,16 @@ export const WEAPON_DUPLICATE_GUARANTEE_LIMIT = 100;
  * Checks whether an item belongs to a specific banner
  */
 export function itemMatchesBanner(item: GachaRecordItem, banner: BannerInfo): boolean {
-  const itemPoolNameLower = (item.poolName || '').toLowerCase();
   const itemPoolIdLower = (item.poolId || '').toLowerCase();
+  const bannerIdLower = banner.id.toLowerCase();
+
+  // Always use exact poolId match if available
+  if (itemPoolIdLower && itemPoolIdLower === bannerIdLower) {
+    return true;
+  }
+
+  // Fallback to poolName for older imports that might have an incorrect poolId
+  const itemPoolNameLower = (item.poolName || '').toLowerCase();
   const bannerLabelLower = banner.label.toLowerCase();
 
   if (banner.poolType === 'E_CharacterGachaPoolType_Standard') {
@@ -91,8 +94,8 @@ export function itemMatchesBanner(item: GachaRecordItem, banner: BannerInfo): bo
     return itemPoolIdLower.includes('beginner') || itemPoolNameLower.includes('beginner') || itemPoolNameLower.includes('new horizons');
   }
 
-  // Special banners match by label
-  return itemPoolNameLower.includes(bannerLabelLower) || itemPoolIdLower === banner.id.toLowerCase();
+  // Try to match by label when poolId isn't an exact match
+  return itemPoolNameLower.includes(bannerLabelLower);
 }
 
 /**
