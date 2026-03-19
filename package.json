@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "conc 'vite' 'DEVELOPMENT=true node wisp-server.mjs'",
+    "dev": "conc -n 'vite,wisp' -c 'green,blue' 'vite' 'DEVELOPMENT=true node wisp-server.mjs'",
     "build": "vite build && bun build wisp-server.mjs --compile --outfile ./dist/wisp-server",
     "preview": "vite preview",
     "test": "vitest run",
