@@ -57,19 +57,26 @@ export async function initDb(): Promise<void> {
     );
   `);
 
-  // Create views for convenient querying
+  // Create/recreate views for convenient querying.
+  // DROP + CREATE is used because the Turso WASM driver does not properly
+  // support CREATE VIEW IF NOT EXISTS, and this also ensures view definitions
+  // are always up to date.
+  await db.exec(`DROP VIEW IF EXISTS character_pulls`);
   await db.exec(`
-    CREATE VIEW IF NOT EXISTS character_pulls AS
+    CREATE VIEW character_pulls AS
     SELECT c.seqId, c.poolId, c.rarity, c.charId, c.charName, c.isFree, c.isNew, c.gachaTs, c.pity,
            COALESCE(p.poolName, c.poolId) AS poolName
     FROM characters c
-    LEFT JOIN pools p ON c.poolId = p.id;
+    LEFT JOIN pools p ON c.poolId = p.id
+  `);
 
-    CREATE VIEW IF NOT EXISTS weapon_pulls AS
+  await db.exec(`DROP VIEW IF EXISTS weapon_pulls`);
+  await db.exec(`
+    CREATE VIEW weapon_pulls AS
     SELECT w.seqId, w.poolId, w.rarity, w.weaponId, w.weaponName, w.weaponType, w.isNew, w.gachaTs, w.pity,
            COALESCE(p.poolName, w.poolId) AS poolName
     FROM weapons w
-    LEFT JOIN pools p ON w.poolId = p.id;
+    LEFT JOIN pools p ON w.poolId = p.id
   `);
 
   // Seed poolType (idempotent via INSERT OR IGNORE)
