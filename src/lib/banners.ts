@@ -4,7 +4,6 @@ export interface BannerInfo {
   id: string;
   poolType: string;
   label: string;
-  hasImage: boolean;
   /**
    * Optional ID of the featured character for this banner.
    * Must match `EndfieldGachaCharacter.charId` and is typically only set for
@@ -25,40 +24,34 @@ export const KNOWN_BANNERS: BannerInfo[] = [
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'River\'s Daughter',
     featuredCharacter: 'chr_0027_tangtang',
-    hasImage: true,
   },
   {
     id: 'special_1_0_2',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'Hues of Passion',
     featuredCharacter: 'chr_0017_yvonne',
-    hasImage: true,
   },
   {
     id: 'special_1_0_3',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'The Floaty Messenger',
     featuredCharacter: 'chr_0013_aglina',
-    hasImage: true,
   },
   {
     id: 'special_1_0_1',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'Scars of the Forge',
     featuredCharacter: 'chr_0016_laevat',
-    hasImage: true,
   },
   {
     id: 'standard',
     poolType: 'E_CharacterGachaPoolType_Standard',
     label: 'Basic Headhunting',
-    hasImage: false,
   },
   {
     id: 'beginner',
     poolType: 'E_CharacterGachaPoolType_Beginner',
     label: 'New Horizons',
-    hasImage: true,
   },
 ];
 

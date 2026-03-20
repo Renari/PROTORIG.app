@@ -72,14 +72,13 @@
       return { 
         id: 'all', 
         poolType: '', 
-        label: isWeaponView ? 'All Arsenal Issues' : 'All Headhunting', 
-        hasImage: false 
+        label: isWeaponView ? 'All Arsenal Issues' : 'All Headhunting'
       } as BannerInfo;
     }
     return KNOWN_BANNERS.find(b => b.id === bannerId) || KNOWN_BANNERS[0];
   })();
 
-  $: bannerImageUrl = currentBanner.hasImage ? getBannerImage(currentBanner.id) : null;
+  $: bannerImageUrl = getBannerImage(currentBanner.id);
 
   $: filteredByBanner = bannerId === 'all'
     ? items
@@ -195,7 +194,7 @@
   <!-- Hero and Stats Container -->
   <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
     <!-- Banner Hero / Title -->
-    {#if currentBanner.hasImage && bannerImageUrl}
+    {#if bannerImageUrl}
       <div class="rounded-2xl overflow-hidden shadow-2xl border border-zinc-700/50 flex items-center justify-center bg-zinc-900/50">
         <img src={bannerImageUrl} alt={currentBanner.label} class="w-full h-auto object-contain block" />
       </div>
@@ -206,28 +205,28 @@
     {/if}
 
     <!-- Stats Row + Action Bar -->
-    <div class="flex flex-col {currentBanner.hasImage ? 'justify-center p-5 xl:p-8' : 'xl:flex-row items-start xl:items-center justify-between p-5 xl:col-span-2'} bg-zinc-800/40 backdrop-blur-xl rounded-2xl border border-zinc-700/50 shadow-xl gap-4">
-      <div class="flex {currentBanner.hasImage ? 'justify-center gap-x-6 md:gap-x-8 gap-y-6 flex-wrap w-full' : 'gap-6 flex-wrap w-full'}">
+    <div class="flex flex-col {bannerImageUrl ? 'justify-center p-5 xl:p-8' : 'xl:flex-row items-start xl:items-center justify-between p-5 xl:col-span-2'} bg-zinc-800/40 backdrop-blur-xl rounded-2xl border border-zinc-700/50 shadow-xl gap-4">
+      <div class="flex {bannerImageUrl ? 'justify-center gap-x-6 md:gap-x-8 gap-y-6 flex-wrap w-full' : 'gap-6 flex-wrap w-full'}">
         <!-- Primary Stats -->
         <div class="flex flex-col items-center">
           <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Total</p>
-          <p class="font-bold text-white {currentBanner.hasImage ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">{totalInView}</p>
+          <p class="font-bold text-white {bannerImageUrl ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">{totalInView}</p>
         </div>
         <div class="flex flex-col items-center">
           <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider inline-flex items-center gap-0.5">6<Icon icon="ph:star-fill" class="relative -top-[1px]" /></p>
-          <p class="font-bold text-[#ff7000] flex items-center justify-center gap-1 {currentBanner.hasImage ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
+          <p class="font-bold text-[#ff7000] flex items-center justify-center gap-1 {bannerImageUrl ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
             {sixStarCount} 
           </p>
         </div>
         <div class="flex flex-col items-center">
           <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider inline-flex items-center gap-0.5">5<Icon icon="ph:star-fill" class="relative -top-[1px]" /></p>
-          <p class="font-bold text-[#ffba03] flex items-center justify-center gap-1 {currentBanner.hasImage ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
+          <p class="font-bold text-[#ffba03] flex items-center justify-center gap-1 {bannerImageUrl ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
             {fiveStarCount}
           </p>
         </div>
         
         <!-- Responsive Line Break: Forces new row on Desktop (side card) only -->
-        {#if currentBanner.hasImage}
+        {#if bannerImageUrl}
           <div class="hidden xl:block w-full h-0"></div>
         {/if}
 
@@ -250,7 +249,7 @@
         {:else if currentBanner.poolType !== 'E_CharacterGachaPoolType_Beginner'}
           <div class="flex flex-col items-center">
             <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Pity</p>
-            <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 {currentBanner.hasImage ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
+            <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 {bannerImageUrl ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
               {#if currentBanner.poolType === 'E_CharacterGachaPoolType_Standard'}
                 {standardPity}<span class="text-zinc-400">/{isWeaponView ? WEAPON_PITY_LIMIT : PITY_LIMIT}</span>
               {:else}
@@ -261,7 +260,7 @@
           {#if currentBanner.poolType === 'E_CharacterGachaPoolType_Special'}
             <div class="flex flex-col items-center">
               <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Guarantee</p>
-              <p class="font-bold text-[#ef4444] flex items-baseline justify-center gap-0.5 {currentBanner.hasImage ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
+              <p class="font-bold text-[#ef4444] flex items-baseline justify-center gap-0.5 {bannerImageUrl ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
                 {#if currentBanner.featuredCharacter}
                   {guarantee.count}<span class="text-zinc-400">/{guarantee.limit}</span>
                 {:else}
