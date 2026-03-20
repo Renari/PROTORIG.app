@@ -326,7 +326,7 @@
             <tr class="{rarityRowClass(item.rarity)} transition-colors">
               <td class="px-5 py-3 text-xs text-zinc-500 font-mono" title="Pull ID: {item.seqId}">{item.seqId}</td>
               <td 
-                class="px-5 py-3 flex items-center gap-2.5 {bgImage ? '!pl-0' : ''}"
+                class="px-5 py-3 flex items-center gap-2.5 whitespace-nowrap {bgImage ? '!pl-0' : ''}"
                 style={bgImage ? `background-image: url(${bgImage}); background-position: left center; background-repeat: no-repeat; background-size: contain;` : ''}
               >
                 <span class="font-bold text-zinc-100 {bgImage ? 'pl-14' : ''}">
@@ -372,7 +372,7 @@
         <div class="px-5 py-4 {rarityRowClass(item.rarity)} flex flex-col gap-2.5 transition-colors">
           <div class="flex items-center justify-between">
             <div 
-              class="flex items-center gap-2.5 py-1"
+              class="flex items-center gap-2.5 py-1 whitespace-nowrap"
               style={bgImage ? `background-image: url(${bgImage}); background-position: left center; background-repeat: no-repeat; background-size: contain;` : ''}
             >
               <span class="font-bold text-base text-zinc-100 {bgImage ? 'pl-9' : ''}">
