@@ -22,6 +22,18 @@
     return null;
   }
 
+  const weaponIcons = import.meta.glob('./assets/icons/itemiconbig/*.{png,jpg}', { eager: true, query: '?url', import: 'default' });
+
+  function getWeaponIcon(weaponId: string): string | null {
+    if (!weaponId) return null;
+    for (const path in weaponIcons) {
+      if (path.includes(`/${weaponId}.`)) {
+        return weaponIcons[path] as string;
+      }
+    }
+    return null;
+  }
+
   import Icon from '@iconify/svelte';
   import gachaWeaponExploreBtnIcon from './assets/icons/gachaweapon_explorebtn_icon.png';
   import gachaPoolIconHeadhuntWeapon from './assets/icons/gachapool_headhunt_weapon_icon.png';
@@ -313,13 +325,14 @@
         </thead>
         <tbody class="divide-y divide-zinc-700/30">
           {#each sortedItems as item (item.seqId)}
+            {@const bgImage = 'charId' in item ? getCharIcon(item.charId) : ('weaponId' in item ? getWeaponIcon(item.weaponId) : null)}
             <tr class="{rarityRowClass(item.rarity)} transition-colors">
               <td class="px-5 py-3 text-xs text-zinc-500 font-mono" title="Pull ID: {item.seqId}">{item.seqId}</td>
               <td 
-                class="px-5 py-3 flex items-center gap-2.5 {('charId' in item && getCharIcon(item.charId)) ? '!pl-0' : ''}"
-                style={('charId' in item && getCharIcon(item.charId)) ? `background-image: url(${getCharIcon(item.charId)}); background-position: left center; background-repeat: no-repeat; background-size: contain;` : ''}
+                class="px-5 py-3 flex items-center gap-2.5 {bgImage ? '!pl-0' : ''}"
+                style={bgImage ? `background-image: url(${bgImage}); background-position: left center; background-repeat: no-repeat; background-size: contain;` : ''}
               >
-                <span class="font-bold text-zinc-100 {('charId' in item && getCharIcon(item.charId)) ? 'pl-14' : ''}">
+                <span class="font-bold text-zinc-100 {bgImage ? 'pl-14' : ''}">
                   {'charName' in item ? item.charName : item.weaponName}
                 </span>
                 {#if item.isNew}
@@ -358,13 +371,14 @@
     <!-- Mobile Card Layout -->
     <div class="lg:hidden flex flex-col divide-y divide-zinc-700/30">
       {#each sortedItems as item (item.seqId)}
+        {@const bgImage = 'charId' in item ? getCharIcon(item.charId) : ('weaponId' in item ? getWeaponIcon(item.weaponId) : null)}
         <div class="px-5 py-4 {rarityRowClass(item.rarity)} flex flex-col gap-2.5 transition-colors">
           <div class="flex items-center justify-between">
             <div 
               class="flex items-center gap-2.5 py-1"
-              style={('charId' in item && getCharIcon(item.charId)) ? `background-image: url(${getCharIcon(item.charId)}); background-position: left center; background-repeat: no-repeat; background-size: contain;` : ''}
+              style={bgImage ? `background-image: url(${bgImage}); background-position: left center; background-repeat: no-repeat; background-size: contain;` : ''}
             >
-              <span class="font-bold text-base text-zinc-100 {('charId' in item && getCharIcon(item.charId)) ? 'pl-9' : ''}">
+              <span class="font-bold text-base text-zinc-100 {bgImage ? 'pl-9' : ''}">
                 {'charName' in item ? item.charName : item.weaponName}
               </span>
               {#if item.isNew}
