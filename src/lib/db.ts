@@ -15,73 +15,70 @@ export async function initDb(): Promise<void> {
 
   // Create tables
   await db.exec(`
-    CREATE TABLE IF NOT EXISTS poolType (
+    CREATE TABLE IF NOT EXISTS pool_type (
       id TEXT PRIMARY KEY,
-      pity6 INTEGER NOT NULL,
-      pity5 INTEGER NOT NULL
+      pity_6 INTEGER NOT NULL,
+      pity_5 INTEGER NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS pools (
       id TEXT PRIMARY KEY,
       type TEXT NOT NULL,
-      poolName TEXT NOT NULL,
+      pool_name TEXT NOT NULL,
       featured TEXT,
       guarantee INTEGER,
-      FOREIGN KEY (type) REFERENCES poolType(id)
+      FOREIGN KEY (type) REFERENCES pool_type(id)
     );
 
     CREATE TABLE IF NOT EXISTS characters (
-      seqId INTEGER PRIMARY KEY,
-      poolId TEXT NOT NULL,
+      seq_id INTEGER PRIMARY KEY,
+      pool_id TEXT NOT NULL,
       rarity INTEGER NOT NULL,
-      charId TEXT NOT NULL,
-      charName TEXT NOT NULL,
-      isFree INTEGER NOT NULL DEFAULT 0,
-      isNew INTEGER NOT NULL DEFAULT 0,
-      gachaTs INTEGER NOT NULL,
+      char_id TEXT NOT NULL,
+      char_name TEXT NOT NULL,
+      is_free INTEGER NOT NULL DEFAULT 0,
+      is_new INTEGER NOT NULL DEFAULT 0,
+      gacha_ts INTEGER NOT NULL,
       pity INTEGER,
-      FOREIGN KEY (poolId) REFERENCES pools(id)
+      FOREIGN KEY (pool_id) REFERENCES pools(id)
     );
 
     CREATE TABLE IF NOT EXISTS weapons (
-      seqId INTEGER PRIMARY KEY,
-      poolId TEXT NOT NULL,
+      seq_id INTEGER PRIMARY KEY,
+      pool_id TEXT NOT NULL,
       rarity INTEGER NOT NULL,
-      weaponId TEXT NOT NULL,
-      weaponName TEXT NOT NULL,
-      weaponType TEXT NOT NULL DEFAULT '',
-      isNew INTEGER NOT NULL DEFAULT 0,
-      gachaTs INTEGER NOT NULL,
+      weapon_id TEXT NOT NULL,
+      weapon_name TEXT NOT NULL,
+      weapon_type TEXT NOT NULL DEFAULT '',
+      is_new INTEGER NOT NULL DEFAULT 0,
+      gacha_ts INTEGER NOT NULL,
       pity INTEGER,
-      FOREIGN KEY (poolId) REFERENCES pools(id)
+      FOREIGN KEY (pool_id) REFERENCES pools(id)
     );
   `);
 
-  // Create/recreate views for convenient querying.
-  // DROP + CREATE is used because the Turso WASM driver does not properly
-  // support CREATE VIEW IF NOT EXISTS, and this also ensures view definitions
-  // are always up to date.
+  // Create/recreate views for convenient querying using snake_case
   await db.exec(`DROP VIEW IF EXISTS character_pulls`);
   await db.exec(`
     CREATE VIEW character_pulls AS
-    SELECT c.seqId, c.poolId, c.rarity, c.charId, c.charName, c.isFree, c.isNew, c.gachaTs, c.pity,
-           COALESCE(p.poolName, c.poolId) AS poolName
+    SELECT c.seq_id, c.pool_id, c.rarity, c.char_id, c.char_name, c.is_free, c.is_new, c.gacha_ts, c.pity,
+           COALESCE(p.pool_name, c.pool_id) AS pool_name
     FROM characters c
-    LEFT JOIN pools p ON c.poolId = p.id
+    LEFT JOIN pools p ON c.pool_id = p.id
   `);
 
   await db.exec(`DROP VIEW IF EXISTS weapon_pulls`);
   await db.exec(`
     CREATE VIEW weapon_pulls AS
-    SELECT w.seqId, w.poolId, w.rarity, w.weaponId, w.weaponName, w.weaponType, w.isNew, w.gachaTs, w.pity,
-           COALESCE(p.poolName, w.poolId) AS poolName
+    SELECT w.seq_id, w.pool_id, w.rarity, w.weapon_id, w.weapon_name, w.weapon_type, w.is_new, w.gacha_ts, w.pity,
+           COALESCE(p.pool_name, w.pool_id) AS pool_name
     FROM weapons w
-    LEFT JOIN pools p ON w.poolId = p.id
+    LEFT JOIN pools p ON w.pool_id = p.id
   `);
 
-  // Seed poolType (idempotent via INSERT OR IGNORE)
+  // Seed pool_type (idempotent via INSERT OR IGNORE)
   const seedPoolType = db.prepare(
-    'INSERT OR IGNORE INTO poolType (id, pity6, pity5) VALUES (?, ?, ?)'
+    'INSERT OR IGNORE INTO pool_type (id, pity_6, pity_5) VALUES (?, ?, ?)'
   );
   await seedPoolType.run(GACHA_POOL_TYPES.SPECIAL, 36, 5);
   await seedPoolType.run(GACHA_POOL_TYPES.STANDARD, 39, 0);
@@ -90,7 +87,7 @@ export async function initDb(): Promise<void> {
 
   // Seed pools (idempotent via INSERT OR IGNORE)
   const seedPool = db.prepare(
-    'INSERT OR IGNORE INTO pools (id, type, poolName, featured, guarantee) VALUES (?, ?, ?, ?, ?)'
+    'INSERT OR IGNORE INTO pools (id, type, pool_name, featured, guarantee) VALUES (?, ?, ?, ?, ?)'
   );
   await seedPool.run('special_1_1_1', GACHA_POOL_TYPES.SPECIAL, "River's Daughter", 'chr_0027_tangtang', 36);
   await seedPool.run('special_1_0_2', GACHA_POOL_TYPES.SPECIAL, 'Hues of Passion', 'chr_0017_yvonne', 30);
@@ -109,15 +106,15 @@ export function getDb(): Database {
 }
 
 /**
- * Insert character gacha records. Uses INSERT OR REPLACE for idempotent re-imports.
+ * Insert character gacha records.
  */
 export async function insertCharacters(chars: EndfieldGachaCharacter[]): Promise<void> {
-  const insert = db.prepare(`
-    INSERT OR REPLACE INTO characters (seqId, poolId, rarity, charId, charName, isFree, isNew, gachaTs, pity)
+  const insert = db!.prepare(`
+    INSERT OR REPLACE INTO characters (seq_id, pool_id, rarity, char_id, char_name, is_free, is_new, gacha_ts, pity)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  const tx = db.transaction(async (items: EndfieldGachaCharacter[]) => {
+  const tx = db!.transaction(async (items: EndfieldGachaCharacter[]) => {
     for (const c of items) {
       await insert.run(
         Number(c.seqId),
@@ -138,11 +135,10 @@ export async function insertCharacters(chars: EndfieldGachaCharacter[]): Promise
 
 /**
  * Insert weapon pool metadata into the pools table.
- * Should be called with the pools returned by fetchWeaponPools() before inserting weapon records.
  */
 export async function insertWeaponPools(pools: EndfieldGachaWeaponPool[]): Promise<void> {
   const insert = db!.prepare(
-    'INSERT OR IGNORE INTO pools (id, type, poolName) VALUES (?, ?, ?)'
+    'INSERT OR IGNORE INTO pools (id, type, pool_name) VALUES (?, ?, ?)'
   );
   for (const pool of pools) {
     await insert.run(pool.poolId, GACHA_POOL_TYPES.WEAPON, pool.poolName);
@@ -150,15 +146,15 @@ export async function insertWeaponPools(pools: EndfieldGachaWeaponPool[]): Promi
 }
 
 /**
- * Insert weapon gacha records. Uses INSERT OR REPLACE for idempotent re-imports.
+ * Insert weapon gacha records.
  */
 export async function insertWeapons(weapons: EndfieldGachaWeapon[]): Promise<void> {
-  const insert = db.prepare(`
-    INSERT OR REPLACE INTO weapons (seqId, poolId, rarity, weaponId, weaponName, weaponType, isNew, gachaTs, pity)
+  const insert = db!.prepare(`
+    INSERT OR REPLACE INTO weapons (seq_id, pool_id, rarity, weapon_id, weapon_name, weapon_type, is_new, gacha_ts, pity)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  const tx = db.transaction(async (items: EndfieldGachaWeapon[]) => {
+  const tx = db!.transaction(async (items: EndfieldGachaWeapon[]) => {
     for (const w of items) {
       await insert.run(
         Number(w.seqId),
@@ -177,80 +173,51 @@ export async function insertWeapons(weapons: EndfieldGachaWeapon[]): Promise<voi
   await tx(weapons);
 }
 
-/** Row shape returned by the bundle's .all(), all column names are lowercase. */
-interface CharacterRow {
-  seqid: number;
-  poolid: string;
-  rarity: number;
-  charid: string;
-  charname: string;
-  isfree: number;
-  isnew: number;
-  gachats: number;
-  pity: number | null;
-  poolname: string;
-}
-
-interface WeaponRow {
-  seqid: number;
-  poolid: string;
-  rarity: number;
-  weaponid: string;
-  weaponname: string;
-  weapontype: string;
-  isnew: number;
-  gachats: number;
-  pity: number | null;
-  poolname: string;
-}
-
 /**
- * Get all character records sorted by gachaTs ascending.
- * Converts SQLite integer booleans back to JS booleans and gachaTs back to string.
+ * Get all character records sorted by gacha_ts ascending.
  */
 export async function getAllCharacters(): Promise<EndfieldGachaCharacter[]> {
-  const rows: CharacterRow[] = await db!.prepare(`
-    SELECT * FROM character_pulls ORDER BY gachaTs ASC
+  const rows = await db!.prepare(`
+    SELECT * FROM character_pulls ORDER BY gacha_ts ASC
   `).all();
 
-  return rows.map((r) => ({
-    seqId: String(r.seqid),
-    poolId: r.poolid,
-    poolName: r.poolname,
+  return rows.map((r: any) => ({
+    seqId: String(r.seq_id),
+    poolId: r.pool_id,
+    poolName: r.pool_name,
     rarity: r.rarity,
-    charId: r.charid,
-    charName: r.charname,
-    isFree: r.isfree === 1,
-    isNew: r.isnew === 1,
-    gachaTs: String(r.gachats),
+    charId: r.char_id,
+    charName: r.char_name,
+    isFree: r.is_free === 1,
+    isNew: r.is_new === 1,
+    gachaTs: String(r.gacha_ts),
   }));
 }
 
 /**
- * Get all weapon records sorted by gachaTs ascending.
- * Converts SQLite integer booleans back to JS booleans and gachaTs back to string.
+ * Get all weapon records sorted by gacha_ts ascending.
  */
 export async function getAllWeapons(): Promise<EndfieldGachaWeapon[]> {
-  const rows: WeaponRow[] = await db!.prepare(`
-    SELECT * FROM weapon_pulls ORDER BY gachaTs ASC
+  const rows = await db!.prepare(`
+    SELECT * FROM weapon_pulls ORDER BY gacha_ts ASC
   `).all();
 
-  return rows.map((r) => ({
-    seqId: String(r.seqid),
-    poolId: r.poolid,
-    poolName: r.poolname,
+  return rows.map((r: any) => ({
+    seqId: String(r.seq_id),
+    poolId: r.pool_id,
+    poolName: r.pool_name,
     rarity: r.rarity,
-    weaponId: r.weaponid,
-    weaponName: r.weaponname,
-    weaponType: r.weapontype,
-    isNew: r.isnew === 1,
-    gachaTs: String(r.gachats),
+    weaponId: r.weapon_id,
+    weaponName: r.weapon_name,
+    weaponType: r.weapon_type,
+    isNew: r.is_new === 1,
+    gachaTs: String(r.gacha_ts),
   }));
 }
 
 /**
- * Delete all character and weapon records (but keep poolType/pools seed data).
+ * Delete all character and weapon records (but keep pool_type/pools seed data).
  */
 export async function clearAllData(): Promise<void> {
-  await db.exec('DELETE FROM characters; DELETE FROM weapons;');
+  await db!.exec('DELETE FROM characters; DELETE FROM weapons;');
 }
