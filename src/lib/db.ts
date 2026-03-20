@@ -1,6 +1,6 @@
 import { connect, type Database } from '@tursodatabase/database-wasm/bundle';
 import type { EndfieldGachaCharacter, EndfieldGachaWeapon, EndfieldGachaWeaponPool } from './api';
-import { CHARACTER_GACHA_POOL_TYPES, WEAPON_PITY_LIMIT } from './banners';
+import { CHARACTER_GACHA_POOL_TYPES } from './banners';
 
 let db: Database | null = null;
 
@@ -196,6 +196,7 @@ export async function getAllCharacters(): Promise<EndfieldGachaCharacter[]> {
     isFree: r.is_free === 1,
     isNew: r.is_new === 1,
     gachaTs: String(r.gacha_ts),
+    pity: r.pity,
   }));
 }
 
@@ -217,6 +218,7 @@ export async function getAllWeapons(): Promise<EndfieldGachaWeapon[]> {
     weaponType: r.weapon_type,
     isNew: r.is_new === 1,
     gachaTs: String(r.gacha_ts),
+    pity: r.pity,
   }));
 }
 
@@ -225,4 +227,143 @@ export async function getAllWeapons(): Promise<EndfieldGachaWeapon[]> {
  */
 export async function clearAllData(): Promise<void> {
   await db!.exec('DELETE FROM characters; DELETE FROM weapons;');
+}
+
+/**
+ * Loops through all pulls chronologically per pool_type and back-calculates
+ * running pity onto every pull, saving the final results into pool_type and pools.
+ */
+export async function recalculateAllPity(): Promise<void> {
+  const charUpdates: { seq_id: number; pity: number | null }[] = [];
+  const weaponUpdates: { seq_id: number; pity: number | null }[] = [];
+  const poolTypeUpdates: { id: string; pity_6: number; pity_5: number }[] = [];
+  const poolUpdates: { id: string; guarantee: number }[] = [];
+
+  // --- 1. Calculate Character Pity ---
+  // Characters share pity across their pool_type (e.g. SPECIAL, STANDARD)
+  for (const poolType of Object.values(CHARACTER_GACHA_POOL_TYPES)) {
+    const poolsForType = await db!.prepare('SELECT id, featured FROM pools WHERE type = ?').all(poolType);
+    const featuredMap: Record<string, string | null> = {};
+    const guaranteeCounts: Record<string, number> = {};
+    for (const p of poolsForType) {
+      featuredMap[String(p.id)] = p.featured ? String(p.featured) : null;
+      guaranteeCounts[String(p.id)] = 0;
+    }
+
+    let pity6 = 0;
+    let pity5 = 0;
+
+    const pulls = await db!.prepare(`
+      SELECT c.seq_id, c.pool_id, c.rarity, c.char_id, c.is_free, c.gacha_ts
+      FROM characters c
+      JOIN pools p ON p.id = c.pool_id
+      WHERE p.type = ?
+      ORDER BY c.seq_id ASC
+    `).all(poolType);
+
+    for (const pull of pulls) {
+      const isFree = pull.is_free === 1;
+      const rarity = Number(pull.rarity);
+      const poolId = String(pull.pool_id);
+      const charId = String(pull.char_id);
+
+      if (isFree) {
+        charUpdates.push({ seq_id: Number(pull.seq_id), pity: null });
+        continue;
+      }
+
+      pity6++;
+      pity5++;
+      guaranteeCounts[poolId] = (guaranteeCounts[poolId] || 0) + 1;
+
+      let assignedPity: number | null = null;
+      if (rarity === 6) assignedPity = pity6;
+      else if (rarity === 5) assignedPity = pity5;
+
+      charUpdates.push({ seq_id: Number(pull.seq_id), pity: assignedPity });
+
+      if (rarity === 6) pity6 = 0;
+      if (rarity === 5) pity5 = 0;
+
+      if (featuredMap[poolId] && charId === featuredMap[poolId]) {
+        guaranteeCounts[poolId] = 0;
+      }
+    }
+
+    poolTypeUpdates.push({ id: poolType, pity_6: pity6, pity_5: pity5 });
+    for (const [poolId, guarantee] of Object.entries(guaranteeCounts)) {
+      poolUpdates.push({ id: poolId, guarantee });
+    }
+  }
+
+  // --- 2. Calculate Weapon Pity ---
+  // Weapons have 1:1 pool_type and pool_id, so they do not share pity across banners.
+  const weaponTypeQuery = `
+    SELECT id FROM pool_type 
+    WHERE id NOT IN (${Object.values(CHARACTER_GACHA_POOL_TYPES).map(() => '?').join(', ')})
+  `;
+  const weaponPoolTypes = await db!.prepare(weaponTypeQuery).all(...Object.values(CHARACTER_GACHA_POOL_TYPES));
+
+  for (const ptRow of weaponPoolTypes) {
+    const poolType = String(ptRow.id);
+    const poolId = poolType; // For weapons, they are identical
+    const poolData = await db!.prepare('SELECT featured FROM pools WHERE id = ?').get(poolId);
+    const featured = poolData?.featured ? String(poolData.featured) : null;
+
+    let pity6 = 0;
+    let pity5 = 0;
+    let guarantee = 0;
+
+    const pulls = await db!.prepare(`
+      SELECT w.seq_id, w.rarity, w.weapon_id
+      FROM weapons w
+      WHERE w.pool_id = ?
+      ORDER BY w.seq_id ASC
+    `).all(poolId);
+
+    for (const pull of pulls) {
+      const rarity = Number(pull.rarity);
+      const weaponId = String(pull.weapon_id);
+
+      pity6++;
+      pity5++;
+      guarantee++;
+
+      let assignedPity: number | null = null;
+      if (rarity === 6) assignedPity = pity6;
+      else if (rarity === 5) assignedPity = pity5;
+
+      weaponUpdates.push({ seq_id: Number(pull.seq_id), pity: assignedPity });
+
+      if (rarity === 6) pity6 = 0;
+      if (rarity === 5) pity5 = 0;
+      if (featured && weaponId === featured) guarantee = 0;
+    }
+
+    poolTypeUpdates.push({ id: poolType, pity_6: pity6, pity_5: pity5 });
+    poolUpdates.push({ id: poolId, guarantee });
+  }
+
+  // Bulk update inside a transaction for performance
+  const tx = db!.transaction(async () => {
+    // Reset defaults
+    await db!.exec('UPDATE pool_type SET pity_6 = 0, pity_5 = 0');
+    await db!.exec('UPDATE pools SET guarantee = 0');
+    await db!.exec('UPDATE characters SET pity = NULL');
+    await db!.exec('UPDATE weapons SET pity = NULL');
+
+    const updChar = db!.prepare('UPDATE characters SET pity = ? WHERE seq_id = ?');
+    for (const u of charUpdates) await updChar.run(u.pity, u.seq_id);
+
+    const updWeapon = db!.prepare('UPDATE weapons SET pity = ? WHERE seq_id = ?');
+    for (const u of weaponUpdates) await updWeapon.run(u.pity, u.seq_id);
+
+    const updPoolType = db!.prepare('UPDATE pool_type SET pity_6 = ?, pity_5 = ? WHERE id = ?');
+    for (const u of poolTypeUpdates) await updPoolType.run(u.pity_6, u.pity_5, u.id);
+
+    const updPool = db!.prepare('UPDATE pools SET guarantee = ? WHERE id = ?');
+    for (const u of poolUpdates) await updPool.run(u.guarantee, u.id);
+  });
+
+  await tx();
 }

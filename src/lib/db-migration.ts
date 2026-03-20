@@ -1,5 +1,5 @@
 import type { EndfieldGachaCharacter, EndfieldGachaWeapon } from './api';
-import { insertCharacters, insertWeaponPools, insertWeapons } from './db';
+import { insertCharacters, insertWeaponPools, insertWeapons, recalculateAllPity } from './db';
 
 const STORAGE_KEY = 'protorig_app_pulls';
 
@@ -44,6 +44,8 @@ export async function migrateFromLocalStorage(): Promise<void> {
       await insertWeaponPools(uniquePools);
       await insertWeapons(weapons);
     }
+    
+    await recalculateAllPity();
 
     // Migration successful — remove the localStorage entry
     localStorage.removeItem(STORAGE_KEY);

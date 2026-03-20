@@ -20,6 +20,7 @@ export interface EndfieldGachaCharacter {
   isNew: boolean;
   gachaTs: string;
   seqId: string;
+  pity?: number | null;
 }
 
 export interface EndfieldGachaWeapon {
@@ -32,6 +33,7 @@ export interface EndfieldGachaWeapon {
   isNew: boolean;
   gachaTs: string;
   seqId: string;
+  pity?: number | null;
 }
 
 export type GachaRecordItem = EndfieldGachaCharacter | EndfieldGachaWeapon;
