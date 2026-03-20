@@ -9,6 +9,15 @@ export default defineConfig({
     tailwindcss(),
     svelte()
   ],
+  server: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'credentialless',
+    },
+  },
+  optimizeDeps: {
+    exclude: ['@tursodatabase/database-wasm'],
+  },
   test: {
     environment: 'jsdom',
   }

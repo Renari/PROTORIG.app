@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
+    "@tursodatabase/database-wasm": "^0.5.1",
     "libcurl.js": "^0.7.4"
   }
 }

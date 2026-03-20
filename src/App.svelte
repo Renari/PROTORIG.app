@@ -5,11 +5,12 @@
   import he from 'he';
   import { fetchAllCharacters, fetchWeaponPools, fetchAllWeapons, type EndfieldGachaCharacter, type EndfieldGachaWeapon } from './lib/api';
   import { exportEGF } from './lib/egf';
+  import { initDb, getAllCharacters, getAllWeapons, insertCharacters, insertWeapons, clearAllData } from './lib/db';
+  import { migrateFromLocalStorage } from './lib/db-migration';
   import Sidebar from './Sidebar.svelte';
   import PullHistory from './PullHistory.svelte';
 
   const LINUX_SH = 'https://raw.githubusercontent.com/Renari/PROTORIG.app/76138d03b71ad231036f3f85b8aad9416d4e7d35/scripts/linux.sh'
-  const STORAGE_KEY = 'protorig_app_pulls';
   const WINDOWS_PS1 = 'https://raw.githubusercontent.com/Renari/PROTORIG.app/92aef8a6629b9be60e0f80292f19c6a67d515185/scripts/windows.ps1'
 
   let currentPage = 'import';
@@ -39,37 +40,22 @@
   $: hasWeapons = fetchedWeapons && fetchedWeapons.length > 0;
   $: hasData = hasCharacters || hasWeapons;
 
-  onMount(() => {
-    const cached = localStorage.getItem(STORAGE_KEY);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed)) {
-          // Legacy array-based storage: only contains characters
-          fetchedCharacters = parsed;
-          fetchedWeapons = [];
-          if (fetchedCharacters.length > 0) saveToStorage(fetchedCharacters, fetchedWeapons);
-        } else {
-          // New object-based storage
-          fetchedCharacters = parsed.characters || [];
-          fetchedWeapons = parsed.weapons || [];
-        }
-        
-        if (fetchedCharacters.length > 0 || fetchedWeapons.length > 0) {
-          currentPage = 'all-headhunts';
-        }
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
+  onMount(async () => {
+    try {
+      await initDb();
+      await migrateFromLocalStorage();
+      fetchedCharacters = await getAllCharacters();
+      fetchedWeapons = await getAllWeapons();
+      if (fetchedCharacters.length > 0 || fetchedWeapons.length > 0) {
+        currentPage = 'all-headhunts';
       }
+    } catch (err) {
+      console.error('Failed to initialize database:', err);
     }
   });
 
-  function saveToStorage(characters: EndfieldGachaCharacter[], weapons: EndfieldGachaWeapon[]) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ characters, weapons }));
-  }
-
-  function clearStorage() {
-    localStorage.removeItem(STORAGE_KEY);
+  async function clearStorage() {
+    await clearAllData();
     fetchedCharacters = [];
     fetchedWeapons = [];
     currentPage = 'import';
@@ -195,9 +181,10 @@
         fetchingStatus = `Scanning weapon pool ${poolName}... Found ${count} pulls.`;
       });
     })
-    .then((weaps) => {
+    .then(async (weaps) => {
       fetchedWeapons = weaps;
-      saveToStorage(fetchedCharacters, fetchedWeapons);
+      await insertCharacters(fetchedCharacters);
+      await insertWeapons(fetchedWeapons);
       currentPage = 'all-headhunts';
     })
     .catch((err: any) => {
