@@ -5,7 +5,7 @@
   import he from 'he';
   import { fetchAllCharacters, fetchWeaponPools, fetchAllWeapons, type EndfieldGachaCharacter, type EndfieldGachaWeapon } from './lib/api';
   import { exportEGF } from './lib/egf';
-  import { initDb, getAllCharacters, getAllWeapons, insertCharacters, insertWeapons, insertWeaponPools, clearAllData } from './lib/db';
+  import { initDb, getAllCharacters, getAllWeapons, insertCharacters, insertWeapons, insertWeaponPools, clearAllData, recalculateAllPity } from './lib/db';
   import { migrateFromLocalStorage } from './lib/db-migration';
   import Sidebar from './Sidebar.svelte';
   import PullHistory from './PullHistory.svelte';
@@ -189,6 +189,8 @@
       await insertCharacters(fetchedCharacters);
       await insertWeaponPools(weaponPools);
       await insertWeapons(fetchedWeapons);
+      fetchingStatus = 'Recalculating global pity records...';
+      await recalculateAllPity();
       currentPage = 'all-headhunts';
     })
     .catch((err: any) => {
