@@ -1,5 +1,5 @@
 <script lang="ts">
-  const bannerImages = import.meta.glob('./assets/banners/*.{png,jpg}', { eager: true, as: 'url' });
+  const bannerImages = import.meta.glob('./assets/banners/*.{png,jpg}', { eager: true, query: '?url', import: 'default' });
   
   function getBannerImage(id: string): string | null {
     for (const path in bannerImages) {
