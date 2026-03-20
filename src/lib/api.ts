@@ -1,5 +1,5 @@
 import { libcurl } from 'libcurl.js/bundled';
-import { GACHA_POOL_TYPES } from './banners';
+import { CHARACTER_GACHA_POOL_TYPES } from './banners';
 
 let isInitialized = false;
 
@@ -55,9 +55,7 @@ export async function fetchAllCharacters(
 
   let allCharacters: EndfieldGachaCharacter[] = [];
 
-  for (const poolType of Object.values(GACHA_POOL_TYPES)) {
-    // Skip weapon pool type
-    if (poolType === GACHA_POOL_TYPES.WEAPON) continue;
+  for (const poolType of Object.values(CHARACTER_GACHA_POOL_TYPES)) {
     let seqId = '';
     let hasMore = true;
     let poolCount = 0;
