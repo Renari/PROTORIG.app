@@ -39,7 +39,7 @@
   import gachaPoolIconHeadhuntWeapon from './assets/icons/gachapool_headhunt_weapon_icon.png';
   import type { GachaRecordItem } from './lib/api';
   import {
-    GACHA_POOL_TYPES,
+    CHARACTER_GACHA_POOL_TYPES,
     DUPLICATE_GUARANTEE_LIMIT,
     GUARANTEE_LIMIT as CHARACTER_GUARANTEE_LIMIT,
     KNOWN_BANNERS,
@@ -61,7 +61,7 @@
   let showRarity5 = true;
   let showRarity4 = false;
 
-  const specialBanners = KNOWN_BANNERS.filter(b => b.poolType === GACHA_POOL_TYPES.SPECIAL);
+  const specialBanners = KNOWN_BANNERS.filter(b => b.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL);
   let activeSpecialId = specialBanners[0]?.id || '';
 
   $: currentBanner = (() => {
@@ -99,7 +99,7 @@
   // the featured character. First copy is guaranteed within 120 pulls; after
   // obtaining the featured character the limit extends to 240 for the next copy.
   $: guarantee = (() => {
-    if (currentBanner.poolType !== GACHA_POOL_TYPES.SPECIAL && !isWeaponView) {
+    if (currentBanner.poolType !== CHARACTER_GACHA_POOL_TYPES.SPECIAL && !isWeaponView) {
       return { count: 0, limit: CHARACTER_GUARANTEE_LIMIT };
     } 
     // Sort oldest-to-newest to simulate pulls sequentially
@@ -244,18 +244,18 @@
               </p>
             </div>
           {/if}
-        {:else if currentBanner.poolType !== GACHA_POOL_TYPES.BEGINNER}
+        {:else if currentBanner.poolType !== CHARACTER_GACHA_POOL_TYPES.BEGINNER}
           <div class="flex flex-col items-center">
             <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Pity</p>
             <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 {bannerImageUrl ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
-              {#if currentBanner.poolType === GACHA_POOL_TYPES.STANDARD}
+              {#if currentBanner.poolType === CHARACTER_GACHA_POOL_TYPES.STANDARD}
                 {standardPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
-              {:else if currentBanner.poolType === GACHA_POOL_TYPES.SPECIAL}
+              {:else if currentBanner.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL}
                 {specialPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
               {/if}
             </p>
           </div>
-          {#if currentBanner.poolType === GACHA_POOL_TYPES.SPECIAL}
+          {#if currentBanner.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL}
             <div class="flex flex-col items-center">
               <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Guarantee</p>
               <p class="font-bold tfeaturedx items-baseline justify-center gap-0.5 {bannerImageUrl ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">

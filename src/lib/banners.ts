@@ -16,11 +16,10 @@ export interface BannerInfo {
  * Character Gacha Pool Types
  * Corresponds to `E_CharacterGachaPoolType_*` from the API.
  */
-export enum GACHA_POOL_TYPES {
+export enum CHARACTER_GACHA_POOL_TYPES {
   SPECIAL = 'E_CharacterGachaPoolType_Special',
   STANDARD = 'E_CharacterGachaPoolType_Standard',
   BEGINNER = 'E_CharacterGachaPoolType_Beginner',
-  WEAPON = 'E_WeaponGachaPoolType', // non-standard, not obtained from API
 }
 
 /**
@@ -91,10 +90,10 @@ export function itemMatchesBanner(item: GachaRecordItem, banner: BannerInfo): bo
   const itemPoolNameLower = (item.poolName || '').toLowerCase();
   const bannerLabelLower = banner.label.toLowerCase();
 
-  if (banner.poolType === GACHA_POOL_TYPES.STANDARD) {
+  if (banner.poolType === CHARACTER_GACHA_POOL_TYPES.STANDARD) {
     return itemPoolIdLower.includes('standard') || itemPoolNameLower.includes('standard') || itemPoolNameLower.includes('basic headhunting');
   }
-  if (banner.poolType === GACHA_POOL_TYPES.BEGINNER) {
+  if (banner.poolType === CHARACTER_GACHA_POOL_TYPES.BEGINNER) {
     return itemPoolIdLower.includes('beginner') || itemPoolNameLower.includes('beginner') || itemPoolNameLower.includes('new horizons');
   }
 

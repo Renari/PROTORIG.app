@@ -1,6 +1,6 @@
 import { connect, type Database } from '@tursodatabase/database-wasm/bundle';
 import type { EndfieldGachaCharacter, EndfieldGachaWeapon, EndfieldGachaWeaponPool } from './api';
-import { GACHA_POOL_TYPES } from './banners';
+import { CHARACTER_GACHA_POOL_TYPES, WEAPON_PITY_LIMIT } from './banners';
 
 let db: Database | null = null;
 
@@ -80,21 +80,20 @@ export async function initDb(): Promise<void> {
   const seedPoolType = db.prepare(
     'INSERT OR IGNORE INTO pool_type (id, pity_6, pity_5) VALUES (?, ?, ?)'
   );
-  await seedPoolType.run(GACHA_POOL_TYPES.SPECIAL, 36, 5);
-  await seedPoolType.run(GACHA_POOL_TYPES.STANDARD, 39, 0);
-  await seedPoolType.run(GACHA_POOL_TYPES.BEGINNER, 0, 1);
-  await seedPoolType.run('Weapon', 40, 0);
+  await seedPoolType.run(CHARACTER_GACHA_POOL_TYPES.SPECIAL, 0, 0);
+  await seedPoolType.run(CHARACTER_GACHA_POOL_TYPES.STANDARD, 0, 0);
+  await seedPoolType.run(CHARACTER_GACHA_POOL_TYPES.BEGINNER, 0, 0);
 
   // Seed pools (idempotent via INSERT OR IGNORE)
   const seedPool = db.prepare(
     'INSERT OR IGNORE INTO pools (id, type, pool_name, featured, guarantee) VALUES (?, ?, ?, ?, ?)'
   );
-  await seedPool.run('special_1_1_1', GACHA_POOL_TYPES.SPECIAL, "River's Daughter", 'chr_0027_tangtang', 36);
-  await seedPool.run('special_1_0_2', GACHA_POOL_TYPES.SPECIAL, 'Hues of Passion', 'chr_0017_yvonne', 30);
-  await seedPool.run('special_1_0_3', GACHA_POOL_TYPES.SPECIAL, 'The Floaty Messenger', 'chr_0013_aglina', 23);
-  await seedPool.run('special_1_0_1', GACHA_POOL_TYPES.SPECIAL, 'Scars of the Forge', 'chr_0016_laevat', 30);
-  await seedPool.run('standard', GACHA_POOL_TYPES.STANDARD, 'Basic Headhunting', null, null);
-  await seedPool.run('beginner', GACHA_POOL_TYPES.BEGINNER, 'New Horizons', null, null);
+  await seedPool.run('special_1_1_1', CHARACTER_GACHA_POOL_TYPES.SPECIAL, "River's Daughter", 'chr_0027_tangtang', 0);
+  await seedPool.run('special_1_0_2', CHARACTER_GACHA_POOL_TYPES.SPECIAL, 'Hues of Passion', 'chr_0017_yvonne', 0);
+  await seedPool.run('special_1_0_3', CHARACTER_GACHA_POOL_TYPES.SPECIAL, 'The Floaty Messenger', 'chr_0013_aglina', 0);
+  await seedPool.run('special_1_0_1', CHARACTER_GACHA_POOL_TYPES.SPECIAL, 'Scars of the Forge', 'chr_0016_laevat', 0);
+  await seedPool.run('standard', CHARACTER_GACHA_POOL_TYPES.STANDARD, 'Basic Headhunting', null, null);
+  await seedPool.run('beginner', CHARACTER_GACHA_POOL_TYPES.BEGINNER, 'New Horizons', null, null);
 }
 
 /**
@@ -137,11 +136,17 @@ export async function insertCharacters(chars: EndfieldGachaCharacter[]): Promise
  * Insert weapon pool metadata into the pools table.
  */
 export async function insertWeaponPools(pools: EndfieldGachaWeaponPool[]): Promise<void> {
-  const insert = db!.prepare(
+  const insertPoolType = db!.prepare(
+    'INSERT OR IGNORE INTO pool_type (id, pity_6, pity_5) VALUES (?, ?, ?)'
+  );
+  const insertPool = db!.prepare(
     'INSERT OR IGNORE INTO pools (id, type, pool_name) VALUES (?, ?, ?)'
   );
+  
   for (const pool of pools) {
-    await insert.run(pool.poolId, GACHA_POOL_TYPES.WEAPON, pool.poolName);
+    // Weapons get a bespoke pool_type entry per-pool for independent pity tracking
+    await insertPoolType.run(pool.poolId, 0, 0);
+    await insertPool.run(pool.poolId, pool.poolId, pool.poolName);
   }
 }
 
