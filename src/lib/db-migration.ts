@@ -1,5 +1,5 @@
 import type { EndfieldGachaCharacter, EndfieldGachaWeapon } from './api';
-import { insertCharacters, insertWeapons } from './db';
+import { insertCharacters, insertWeaponPools, insertWeapons } from './db';
 
 const STORAGE_KEY = 'protorig_app_pulls';
 
@@ -33,6 +33,15 @@ export async function migrateFromLocalStorage(): Promise<void> {
       await insertCharacters(characters);
     }
     if (weapons.length > 0) {
+      // Extract unique weapon pools from individual records
+      const poolMap = new Map<string, string>();
+      for (const w of weapons) {
+        if (w.poolId && w.poolName) {
+          poolMap.set(w.poolId, w.poolName);
+        }
+      }
+      const uniquePools = Array.from(poolMap, ([poolId, poolName]) => ({ poolId, poolName }));
+      await insertWeaponPools(uniquePools);
       await insertWeapons(weapons);
     }
 

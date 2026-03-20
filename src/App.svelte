@@ -5,7 +5,7 @@
   import he from 'he';
   import { fetchAllCharacters, fetchWeaponPools, fetchAllWeapons, type EndfieldGachaCharacter, type EndfieldGachaWeapon } from './lib/api';
   import { exportEGF } from './lib/egf';
-  import { initDb, getAllCharacters, getAllWeapons, insertCharacters, insertWeapons, clearAllData } from './lib/db';
+  import { initDb, getAllCharacters, getAllWeapons, insertCharacters, insertWeapons, insertWeaponPools, clearAllData } from './lib/db';
   import { migrateFromLocalStorage } from './lib/db-migration';
   import Sidebar from './Sidebar.svelte';
   import PullHistory from './PullHistory.svelte';
@@ -169,6 +169,8 @@
     fetchedWeapons = [];
     fetchingStatus = 'Initializing secure WebAssembly proxy...';
 
+    let weaponPools: Awaited<ReturnType<typeof fetchWeaponPools>> = [];
+
     fetchAllCharacters(currentToken, serverId, lang, (pool, count) => {
       fetchingStatus = `Scanning character pool ${pool}... Found ${count} pulls.`;
     })
@@ -177,6 +179,7 @@
       return fetchWeaponPools(currentToken, serverId, lang);
     })
     .then((pools) => {
+      weaponPools = pools;
       return fetchAllWeapons(currentToken, serverId, lang, pools, (poolName: string, count: number) => {
         fetchingStatus = `Scanning weapon pool ${poolName}... Found ${count} pulls.`;
       });
@@ -184,6 +187,7 @@
     .then(async (weaps) => {
       fetchedWeapons = weaps;
       await insertCharacters(fetchedCharacters);
+      await insertWeaponPools(weaponPools);
       await insertWeapons(fetchedWeapons);
       currentPage = 'all-headhunts';
     })
