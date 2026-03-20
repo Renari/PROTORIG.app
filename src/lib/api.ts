@@ -56,6 +56,8 @@ export async function fetchAllCharacters(
   let allCharacters: EndfieldGachaCharacter[] = [];
 
   for (const poolType of Object.values(GACHA_POOL_TYPES)) {
+    // Skip weapon pool type
+    if (poolType === GACHA_POOL_TYPES.WEAPON) continue;
     let seqId = '';
     let hasMore = true;
     let poolCount = 0;
