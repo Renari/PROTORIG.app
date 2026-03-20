@@ -361,10 +361,10 @@
         <div class="px-5 py-4 {rarityRowClass(item.rarity)} flex flex-col gap-2.5 transition-colors">
           <div class="flex items-center justify-between">
             <div 
-              class="flex items-center gap-2.5 py-1 {('charId' in item && getCharIcon(item.charId)) ? '-ml-5 pl-5' : ''}"
+              class="flex items-center gap-2.5 py-1"
               style={('charId' in item && getCharIcon(item.charId)) ? `background-image: url(${getCharIcon(item.charId)}); background-position: left center; background-repeat: no-repeat; background-size: contain;` : ''}
             >
-              <span class="font-bold text-base text-zinc-100 {('charId' in item && getCharIcon(item.charId)) ? 'pl-14' : ''}">
+              <span class="font-bold text-base text-zinc-100 {('charId' in item && getCharIcon(item.charId)) ? 'pl-9' : ''}">
                 {'charName' in item ? item.charName : item.weaponName}
               </span>
               {#if item.isNew}
