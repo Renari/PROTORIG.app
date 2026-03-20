@@ -10,6 +10,18 @@
     return null;
   }
 
+  const charIcons = import.meta.glob('./assets/icons/charbattleicon/*.{png,jpg}', { eager: true, query: '?url', import: 'default' });
+
+  function getCharIcon(charId: string): string | null {
+    if (!charId) return null;
+    for (const path in charIcons) {
+      if (path.includes(`/icon_${charId}.`)) {
+        return charIcons[path] as string;
+      }
+    }
+    return null;
+  }
+
   import Icon from '@iconify/svelte';
   import type { GachaRecordItem } from './lib/api';
   import {
@@ -301,8 +313,13 @@
           {#each sortedItems as item (item.seqId)}
             <tr class="{rarityRowClass(item.rarity)} transition-colors">
               <td class="px-5 py-3 text-xs text-zinc-500 font-mono" title="Pull ID: {item.seqId}">{item.seqId}</td>
-              <td class="px-5 py-3 flex items-center gap-2.5">
-                <span class="font-bold text-zinc-100">{'charName' in item ? item.charName : item.weaponName}</span>
+              <td 
+                class="px-5 py-3 flex items-center gap-2.5 {('charId' in item && getCharIcon(item.charId)) ? '!pl-0' : ''}"
+                style={('charId' in item && getCharIcon(item.charId)) ? `background-image: url(${getCharIcon(item.charId)}); background-position: left center; background-repeat: no-repeat; background-size: contain;` : ''}
+              >
+                <span class="font-bold text-zinc-100 {('charId' in item && getCharIcon(item.charId)) ? 'pl-14' : ''}">
+                  {'charName' in item ? item.charName : item.weaponName}
+                </span>
                 {#if item.isNew}
                   <span class="bg-zinc-700/80 text-zinc-300 border border-zinc-600/50 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm">New</span>
                 {/if}
@@ -341,8 +358,13 @@
       {#each sortedItems as item (item.seqId)}
         <div class="px-5 py-4 {rarityRowClass(item.rarity)} flex flex-col gap-2.5 transition-colors">
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2.5">
-              <span class="font-bold text-base text-zinc-100">{'charName' in item ? item.charName : item.weaponName}</span>
+            <div 
+              class="flex items-center gap-2.5 py-1 {('charId' in item && getCharIcon(item.charId)) ? '-ml-5 pl-5' : ''}"
+              style={('charId' in item && getCharIcon(item.charId)) ? `background-image: url(${getCharIcon(item.charId)}); background-position: left center; background-repeat: no-repeat; background-size: contain;` : ''}
+            >
+              <span class="font-bold text-base text-zinc-100 {('charId' in item && getCharIcon(item.charId)) ? 'pl-14' : ''}">
+                {'charName' in item ? item.charName : item.weaponName}
+              </span>
               {#if item.isNew}
                 <span class="bg-zinc-700/80 text-zinc-300 border border-zinc-600/50 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm">New</span>
               {/if}
