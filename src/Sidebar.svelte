@@ -4,6 +4,8 @@
   import githubLogo from './assets/GitHub_Lockup_White.png';
   import Icon from '@iconify/svelte';
   import type { EndfieldGachaCharacter, EndfieldGachaWeapon } from './lib/api';
+  import gachaWeaponExploreBtnIcon from './assets/icons/gachaweapon_explorebtn_icon.png';
+  import btnRaffle2 from './assets/icons/btn_raffle_2.png';
 
   export let characters: EndfieldGachaCharacter[];
   export let weapons: EndfieldGachaWeapon[];
@@ -128,7 +130,7 @@
           {#if bannerActive}
             <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1/2 bg-primary-500 rounded-r-md"></div>
           {/if}
-          <Icon icon="ph:flag-banner-bold" class="text-lg flex-shrink-0" />
+          <img src={bannerActive ? btnRaffle2 : gachaWeaponExploreBtnIcon} alt="" class="h-[18px] w-[18px] object-contain flex-shrink-0 {bannerActive ? 'scale-175' : 'scale-150 opacity-70 group-hover:opacity-100'}" />
           <span class="truncate">{cat.label}</span>
         </button>
       {/each}

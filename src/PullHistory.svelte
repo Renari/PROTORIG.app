@@ -23,6 +23,8 @@
   }
 
   import Icon from '@iconify/svelte';
+  import gachaWeaponExploreBtnIcon from './assets/icons/gachaweapon_explorebtn_icon.png';
+  import gachaPoolIconHeadhuntWeapon from './assets/icons/gachapool_headhunt_weapon_icon.png';
   import type { GachaRecordItem } from './lib/api';
   import {
     DUPLICATE_GUARANTEE_LIMIT,
@@ -389,7 +391,7 @@
           <div class="flex items-center justify-between text-xs text-zinc-400 mt-1">
             <div class="flex-1 flex flex-col gap-1">
               <div class="flex items-center gap-1.5">
-                <Icon icon="ph:flag-banner-fill" class="text-zinc-500" />
+                <img src={isWeaponView ? gachaPoolIconHeadhuntWeapon : gachaWeaponExploreBtnIcon} alt="" class="w-3.5 h-3.5 object-contain opacity-70 scale-150" />
                 <span class="truncate pr-2">{item.poolName || item.poolId}</span>
               </div>
               <div class="flex items-center gap-1.5 text-zinc-500 font-mono tracking-tight">
