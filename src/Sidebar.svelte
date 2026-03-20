@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { KNOWN_BANNERS } from './lib/banners';
   import { onMount } from 'svelte';
   import githubLogo from './assets/GitHub_Lockup_White.png';
   import Icon from '@iconify/svelte';
@@ -121,7 +120,6 @@
       <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-3 mb-2">Headhunt</p>
       {#each bannerCategories as cat (cat.id)}
         {@const bannerActive = currentPage === `banner:${cat.id}`}
-        {@const knownBanner = KNOWN_BANNERS.find(b => b.id === cat.id)}
         <button
           on:click={() => handleNav(`banner:${cat.id}`)}
           class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group border relative overflow-hidden

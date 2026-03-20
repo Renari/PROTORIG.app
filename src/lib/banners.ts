@@ -5,16 +5,27 @@ export interface BannerInfo {
   poolType: string;
   label: string;
   /**
-   * Optional ID of the featured character for this banner.
-   * Must match `EndfieldGachaCharacter.charId` and is typically only set for
-   * special/limited character banners used in guarantee reset logic.
+   * Optional ID of the featured character or weapon for this banner.
+   * Must match `EndfieldGachaCharacter.charId` or `EndfieldGachaWeapon.weaponId` and is typically only set for
+   * special/limited character or weapon banners used in guarantee reset logic.
    */
-  featuredCharacter?: string;
+  featured?: string;
 }
 
 /**
- * Maps known pool names (from the API `poolName` field) to banner metadata.
- * The `poolName` is used as the key for matching specific limited banners.
+ * Character Gacha Pool Types
+ * Corresponds to `E_CharacterGachaPoolType_*` from the API.
+ */
+export enum GACHA_POOL_TYPES {
+  SPECIAL = 'E_CharacterGachaPoolType_Special',
+  STANDARD = 'E_CharacterGachaPoolType_Standard',
+  BEGINNER = 'E_CharacterGachaPoolType_Beginner',
+  WEAPON = 'E_WeaponGachaPoolType', // non-standard, not obtained from API
+}
+
+/**
+ * Maps known pool names to banner metadata.
+ * The `id` is used as the key for matching specific limited banners.
  * `poolType` corresponds to `E_CharacterGachaPoolType_*` from the API. 
  * This list must be sorted from the most recent banner to the least recent banner.
  */
@@ -23,25 +34,25 @@ export const KNOWN_BANNERS: BannerInfo[] = [
     id: 'special_1_1_1',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'River\'s Daughter',
-    featuredCharacter: 'chr_0027_tangtang',
+    featured: 'chr_0027_tangtang',
   },
   {
     id: 'special_1_0_2',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'Hues of Passion',
-    featuredCharacter: 'chr_0017_yvonne',
+    featured: 'chr_0017_yvonne',
   },
   {
     id: 'special_1_0_3',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'The Floaty Messenger',
-    featuredCharacter: 'chr_0013_aglina',
+    featured: 'chr_0013_aglina',
   },
   {
     id: 'special_1_0_1',
     poolType: 'E_CharacterGachaPoolType_Special',
     label: 'Scars of the Forge',
-    featuredCharacter: 'chr_0016_laevat',
+    featured: 'chr_0016_laevat',
   },
   {
     id: 'standard',
@@ -80,10 +91,10 @@ export function itemMatchesBanner(item: GachaRecordItem, banner: BannerInfo): bo
   const itemPoolNameLower = (item.poolName || '').toLowerCase();
   const bannerLabelLower = banner.label.toLowerCase();
 
-  if (banner.poolType === 'E_CharacterGachaPoolType_Standard') {
+  if (banner.poolType === GACHA_POOL_TYPES.STANDARD) {
     return itemPoolIdLower.includes('standard') || itemPoolNameLower.includes('standard') || itemPoolNameLower.includes('basic headhunting');
   }
-  if (banner.poolType === 'E_CharacterGachaPoolType_Beginner') {
+  if (banner.poolType === GACHA_POOL_TYPES.BEGINNER) {
     return itemPoolIdLower.includes('beginner') || itemPoolNameLower.includes('beginner') || itemPoolNameLower.includes('new horizons');
   }
 

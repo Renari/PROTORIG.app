@@ -39,13 +39,13 @@
   import gachaPoolIconHeadhuntWeapon from './assets/icons/gachapool_headhunt_weapon_icon.png';
   import type { GachaRecordItem } from './lib/api';
   import {
+    GACHA_POOL_TYPES,
     DUPLICATE_GUARANTEE_LIMIT,
-    GUARANTEE_LIMIT,
+    GUARANTEE_LIMIT as CHARACTER_GUARANTEE_LIMIT,
     KNOWN_BANNERS,
     PITY_LIMIT,
     WEAPON_DUPLICATE_GUARANTEE_LIMIT,
     WEAPON_GUARANTEE_LIMIT,
-    WEAPON_PITY_LIMIT,
     getPoolTypeForItem,
     itemMatchesBanner,
     type BannerInfo
@@ -61,17 +61,14 @@
   let showRarity5 = true;
   let showRarity4 = false;
 
-  const specialBanners = KNOWN_BANNERS.filter(b => b.poolType === 'E_CharacterGachaPoolType_Special' && b.id !== 'special-headhunting');
+  const specialBanners = KNOWN_BANNERS.filter(b => b.poolType === GACHA_POOL_TYPES.SPECIAL);
   let activeSpecialId = specialBanners[0]?.id || '';
 
   $: currentBanner = (() => {
-    if (bannerId === 'special-headhunting') {
-      return KNOWN_BANNERS.find(b => b.id === activeSpecialId) || KNOWN_BANNERS[0];
-    }
     if (bannerId === 'all') {
-      return { 
-        id: 'all', 
-        poolType: '', 
+      return {
+        id: 'all',
+        poolType: '',
         label: isWeaponView ? 'All Arsenal Issues' : 'All Headhunting'
       } as BannerInfo;
     }
@@ -102,18 +99,19 @@
   // the featured character. First copy is guaranteed within 120 pulls; after
   // obtaining the featured character the limit extends to 240 for the next copy.
   $: guarantee = (() => {
-    if (currentBanner.poolType !== 'E_CharacterGachaPoolType_Special' || !currentBanner.featuredCharacter) {
-      return { count: 0, limit: isWeaponView ? WEAPON_GUARANTEE_LIMIT : GUARANTEE_LIMIT };
-    }
+    if (currentBanner.poolType !== GACHA_POOL_TYPES.SPECIAL && !isWeaponView) {
+      return { count: 0, limit: CHARACTER_GUARANTEE_LIMIT };
+    } 
     // Sort oldest-to-newest to simulate pulls sequentially
     const chronologicallySorted = [...filteredByBanner].sort((a, b) => Number(a.seqId) - Number(b.seqId));
     let count = 0;
-    let limit = isWeaponView ? WEAPON_GUARANTEE_LIMIT : GUARANTEE_LIMIT;
+    let limit = isWeaponView ? WEAPON_GUARANTEE_LIMIT : CHARACTER_GUARANTEE_LIMIT;
     let limit_dup = isWeaponView ? WEAPON_DUPLICATE_GUARANTEE_LIMIT : DUPLICATE_GUARANTEE_LIMIT;
     for (const item of chronologicallySorted) {
-      if (!('isFree' in item) || !item.isFree) count++;
+      if (('isFree' in item) && item.isFree) continue;
+      count++;
       const id = ('charId' in item) ? item.charId : item.weaponId;
-      if (id === currentBanner.featuredCharacter) {
+      if (id === currentBanner.featured) {
         count = 0;
         limit = limit_dup;
       }
@@ -246,22 +244,22 @@
               </p>
             </div>
           {/if}
-        {:else if currentBanner.poolType !== 'E_CharacterGachaPoolType_Beginner'}
+        {:else if currentBanner.poolType !== GACHA_POOL_TYPES.BEGINNER}
           <div class="flex flex-col items-center">
             <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Pity</p>
             <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 {bannerImageUrl ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
-              {#if currentBanner.poolType === 'E_CharacterGachaPoolType_Standard'}
-                {standardPity}<span class="text-zinc-400">/{isWeaponView ? WEAPON_PITY_LIMIT : PITY_LIMIT}</span>
-              {:else}
-                {specialPity}<span class="text-zinc-400">/{isWeaponView ? WEAPON_PITY_LIMIT : PITY_LIMIT}</span>
+              {#if currentBanner.poolType === GACHA_POOL_TYPES.STANDARD}
+                {standardPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
+              {:else if currentBanner.poolType === GACHA_POOL_TYPES.SPECIAL}
+                {specialPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
               {/if}
             </p>
           </div>
-          {#if currentBanner.poolType === 'E_CharacterGachaPoolType_Special'}
+          {#if currentBanner.poolType === GACHA_POOL_TYPES.SPECIAL}
             <div class="flex flex-col items-center">
               <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Guarantee</p>
-              <p class="font-bold text-[#ef4444] flex items-baseline justify-center gap-0.5 {bannerImageUrl ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
-                {#if currentBanner.featuredCharacter}
+              <p class="font-bold tfeaturedx items-baseline justify-center gap-0.5 {bannerImageUrl ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
+                {#if currentBanner.featured}
                   {guarantee.count}<span class="text-zinc-400">/{guarantee.limit}</span>
                 {:else}
                   <span class="text-zinc-400">N/A</span>
@@ -352,7 +350,7 @@
                   <span class="text-zinc-500 text-sm flex items-center gap-0.5">{item.rarity}<Icon icon="ph:star-fill" class="text-xs ml-0.5" /></span>
                 {/if}
               </td>
-              <td class="px-5 py-3 text-sm text-zinc-400">{item.poolName || item.poolId}</td>
+              <td class="px-5 py-3 text-sm text-zinc-400">{item.poolName}</td>
               <td class="px-5 py-3 text-sm text-zinc-500 font-mono tracking-tight">{formatDate(item.gachaTs)}</td>
             </tr>
           {/each}
@@ -405,7 +403,7 @@
             <div class="flex-1 flex flex-col gap-1">
               <div class="flex items-center gap-1.5">
                 <img src={isWeaponView ? gachaPoolIconHeadhuntWeapon : gachaWeaponExploreBtnIcon} alt="" class="w-3.5 h-3.5 object-contain opacity-70 scale-150" />
-                <span class="truncate pr-2">{item.poolName || item.poolId}</span>
+                <span class="truncate pr-2">{item.poolName}</span>
               </div>
               <div class="flex items-center gap-1.5 text-zinc-500 font-mono tracking-tight">
                 <Icon icon="ph:clock-fill" class="text-zinc-600" />

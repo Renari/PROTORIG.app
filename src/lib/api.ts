@@ -1,4 +1,5 @@
 import { libcurl } from 'libcurl.js/bundled';
+import { GACHA_POOL_TYPES } from './banners';
 
 let isInitialized = false;
 
@@ -52,10 +53,9 @@ export async function fetchAllCharacters(
 ): Promise<EndfieldGachaCharacter[]> {
   await initLibcurl();
 
-  const pools = ['E_CharacterGachaPoolType_Special', 'E_CharacterGachaPoolType_Standard', "E_CharacterGachaPoolType_Beginner"];
   let allCharacters: EndfieldGachaCharacter[] = [];
 
-  for (const poolType of pools) {
+  for (const poolType of Object.values(GACHA_POOL_TYPES)) {
     let seqId = '';
     let hasMore = true;
     let poolCount = 0;
