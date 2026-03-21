@@ -5,7 +5,7 @@
   import he from 'he';
   import { fetchAllCharacters, fetchWeaponPools, fetchAllWeapons, type EndfieldGachaCharacter, type EndfieldGachaWeapon } from './lib/api';
   import { exportEGF } from './lib/egf';
-  import { initDb, getAllCharacters, getAllWeapons, insertCharacters, insertWeapons, insertWeaponPools, clearAllData, recalculateAllPity, getPityStats, type PityStats } from './lib/db';
+  import { initDb, closeDb, getAllCharacters, getAllWeapons, insertCharacters, insertWeapons, insertWeaponPools, clearAllData, recalculateAllPity, getPityStats, type PityStats } from './lib/db';
   import { migrateFromLocalStorage } from './lib/db-migration';
   import Sidebar from './Sidebar.svelte';
   import PullHistory from './PullHistory.svelte';
@@ -42,36 +42,49 @@
   $: hasWeapons = fetchedWeapons && fetchedWeapons.length > 0;
   $: hasData = hasCharacters || hasWeapons;
 
-  onMount(async () => {
-    try {
-      await initDb();
-      await migrateFromLocalStorage();
-      fetchedCharacters = await getAllCharacters();
-      fetchedWeapons = await getAllWeapons();
-      pityStats = await getPityStats();
-      if (fetchedCharacters.length > 0 || fetchedWeapons.length > 0) {
-        currentPage = 'all-headhunts';
-      }
-    } catch (err: any) {
-      console.error('Failed to initialize database:', err);
-      const isLockError = err.name === 'NoModificationAllowedError' 
-        || err.name === 'DOMException'
-        || err.message?.includes('Access Handles cannot be created')
-        || err.message?.includes('No modification allowed') 
-        || err.message?.includes('lock');
-        
-      if (isLockError) {
-        dbLockedError = true;
-      }
-    }
+  onMount(() => {
+    initDb()
+      .then(async () => {
+        await migrateFromLocalStorage();
+        fetchedCharacters = await getAllCharacters();
+        fetchedWeapons = await getAllWeapons();
+        pityStats = await getPityStats();
+        if (fetchedCharacters.length > 0 || fetchedWeapons.length > 0) {
+          currentPage = 'all-headhunts';
+        }
+      })
+      .catch((err: any) => {
+        console.error('Failed to initialize database:', err);
+        const isLockError = err.name === 'NoModificationAllowedError' 
+          || err.name === 'DOMException'
+          || err.message?.includes('Access Handles cannot be created')
+          || err.message?.includes('No modification allowed') 
+          || err.message?.includes('lock');
+          
+        if (isLockError) {
+          dbLockedError = true;
+        }
+      })
+      .finally(async () => {
+        await closeDb();
+      });
   });
 
-  async function clearStorage() {
-    await clearAllData();
-    fetchedCharacters = [];
-    fetchedWeapons = [];
-    pityStats = await getPityStats();
-    currentPage = 'import';
+  function clearStorage() {
+    initDb()
+      .then(async () => {
+        await clearAllData();
+        fetchedCharacters = [];
+        fetchedWeapons = [];
+        pityStats = await getPityStats();
+        currentPage = 'import';
+      })
+      .catch((err: any) => {
+        console.error('Failed to clear storage:', err);
+      })
+      .finally(async () => {
+        await closeDb();
+      });
   }
 
   function handleNavigate(page: string) {
@@ -180,35 +193,39 @@
     errorMsg = '';
     fetchingStatus = 'Initializing secure WebAssembly proxy...';
 
-    fetchAllCharacters(currentToken, serverId, lang, (pool, count) => {
-      fetchingStatus = `Scanning character pool ${pool}... Found ${count} pulls.`;
-    })
-    .then(async (chars) => {
-      await insertCharacters(chars);
-      return fetchWeaponPools(currentToken, serverId, lang);
-    })
-    .then(async (pools) => {
-      await insertWeaponPools(pools);
-      return fetchAllWeapons(currentToken, serverId, lang, pools, (poolName: string, count: number) => {
-        fetchingStatus = `Scanning weapon pool ${poolName}... Found ${count} pulls.`;
+    initDb()
+      .then(() => {
+        return fetchAllCharacters(currentToken, serverId, lang, (pool, count) => {
+          fetchingStatus = `Scanning character pool ${pool}... Found ${count} pulls.`;
+        });
+      })
+      .then(async (chars) => {
+        await insertCharacters(chars);
+        return fetchWeaponPools(currentToken, serverId, lang);
+      })
+      .then(async (pools) => {
+        await insertWeaponPools(pools);
+        return fetchAllWeapons(currentToken, serverId, lang, pools, (poolName: string, count: number) => {
+          fetchingStatus = `Scanning weapon pool ${poolName}... Found ${count} pulls.`;
+        });
+      })
+      .then(async (weaps) => {
+        await insertWeapons(weaps);
+        fetchingStatus = 'Recalculating global pity records...';
+        await recalculateAllPity();
+        pityStats = await getPityStats();
+        fetchedCharacters = await getAllCharacters();
+        fetchedWeapons = await getAllWeapons();
+        currentPage = 'all-headhunts';
+      })
+      .catch((err: any) => {
+        errorMsg = err.message || 'Failed to fetch the pulls using the provided token.';
+      })
+      .finally(async () => {
+        await closeDb();
+        isFetching = false;
+        fetchingStatus = '';
       });
-    })
-    .then(async (weaps) => {
-      await insertWeapons(weaps);
-      fetchingStatus = 'Recalculating global pity records...';
-      await recalculateAllPity();
-      pityStats = await getPityStats();
-      fetchedCharacters = await getAllCharacters();
-      fetchedWeapons = await getAllWeapons();
-      currentPage = 'all-headhunts';
-    })
-    .catch((err: any) => {
-      errorMsg = err.message || 'Failed to fetch the pulls using the provided token.';
-    })
-    .finally(() => {
-      isFetching = false;
-      fetchingStatus = '';
-    });
   }
 
   function handleExport() {
