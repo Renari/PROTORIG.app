@@ -85,7 +85,7 @@
     if (bannerId === 'special-arsenal') {
       return KNOWN_BANNERS.find(b => b.id === activeWeaponSpecialId) || specialWeaponBanners[0];
     }
-    if (bannerId === 'standard-arsenal') {
+    if (bannerId === 'basic-arsenal') {
       return KNOWN_BANNERS.find(b => b.id === activeWeaponStandardId) || standardWeaponBanners[0];
     }
     return KNOWN_BANNERS.find(b => b.id === bannerId) || KNOWN_BANNERS[0];
@@ -217,7 +217,7 @@
         </button>
       {/each}
     </div>
-  {:else if bannerId === 'standard-arsenal'}
+  {:else if bannerId === 'basic-arsenal'}
     <div class="flex flex-wrap items-center gap-2 p-1.5 bg-zinc-800/80 rounded-xl border border-zinc-700/50 shadow-sm backdrop-blur-xl">
       {#each standardWeaponBanners as sp}
         <button
