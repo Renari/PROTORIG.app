@@ -1,0 +1,90 @@
+[
+  {
+    "id": "special_1_1_1",
+    "poolType": "E_CharacterGachaPoolType_Special",
+    "poolName": "River's Daughter",
+    "featured": "chr_0027_tangtang"
+  },
+  {
+    "id": "weponbox_1_1_1",
+    "poolType": "weapon",
+    "poolName": "Budding Anew Issue",
+    "featured": "wpn_pistol_0011"
+  },
+  {
+    "id": "special_1_0_2",
+    "poolType": "E_CharacterGachaPoolType_Special",
+    "poolName": "Hues of Passion",
+    "featured": "chr_0017_yvonne"
+  },
+  {
+    "id": "weponbox_1_0_2",
+    "poolType": "weapon",
+    "poolName": "Graffiti Issue",
+    "featured": "wpn_pistol_0010"
+  },
+  {
+    "id": "special_1_0_3",
+    "poolType": "E_CharacterGachaPoolType_Special",
+    "poolName": "The Floaty Messenger",
+    "featured": "chr_0013_aglina"
+  },
+  {
+    "id": "weponbox_1_0_3",
+    "poolType": "weapon",
+    "poolName": "Express Delivery Issue",
+    "featured": "wpn_funnel_0011"
+  },
+  {
+    "id": "special_1_0_1",
+    "poolType": "E_CharacterGachaPoolType_Special",
+    "poolName": "Scars of the Forge",
+    "featured": "chr_0016_laevat"
+  },
+  {
+    "id": "weponbox_1_0_1",
+    "poolType": "weapon",
+    "poolName": "Smelting Forge Issue",
+    "featured": "wpn_sword_0006"
+  },
+  {
+    "id": "standard",
+    "poolType": "E_CharacterGachaPoolType_Standard",
+    "poolName": "Basic Headhunting"
+  },
+  {
+    "id": "beginner",
+    "poolType": "E_CharacterGachaPoolType_Beginner",
+    "poolName": "New Horizons"
+  },
+  {
+    "id": "weaponbox_constant_5",
+    "poolType": "weapon",
+    "poolName": "Thunderous Peal Issue",
+    "featured": "wpn_claym_0007"
+  },
+  {
+    "id": "weaponbox_constant_4",
+    "poolType": "weapon",
+    "poolName": "Rising Mount Issue",
+    "featured": "wpn_lance_0012"
+  },
+  {
+    "id": "weaponbox_constant_3",
+    "poolType": "weapon",
+    "poolName": "Far Expedition Issue",
+    "featured": "wpn_sword_0016"
+  },
+  {
+    "id": "weaponbox_constant_2",
+    "poolType": "weapon",
+    "poolName": "Cosmic Voice Issue",
+    "featured": "wpn_funnel_0013"
+  },
+  {
+    "id": "weaponbox_constant_1",
+    "poolType": "weapon",
+    "poolName": "Solid Ice Issue",
+    "featured": "wpn_claym_0013"
+  }
+]

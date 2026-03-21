@@ -5,7 +5,7 @@
   import he from 'he';
   import { fetchAllCharacters, fetchWeaponPools, fetchAllWeapons, type EndfieldGachaCharacter, type EndfieldGachaWeapon } from './lib/api';
   import { exportEGF } from './lib/egf';
-  import { initDb, getAllCharacters, getAllWeapons, insertCharacters, insertWeapons, insertWeaponPools, clearAllData, recalculateAllPity } from './lib/db';
+  import { initDb, getAllCharacters, getAllWeapons, insertCharacters, insertWeapons, insertWeaponPools, clearAllData, recalculateAllPity, getPityStats, type PityStats } from './lib/db';
   import { migrateFromLocalStorage } from './lib/db-migration';
   import Sidebar from './Sidebar.svelte';
   import PullHistory from './PullHistory.svelte';
@@ -26,6 +26,7 @@
   let errorMsg = '';
   let fetchedCharacters: EndfieldGachaCharacter[] = [];
   let fetchedWeapons: EndfieldGachaWeapon[] = [];
+  let pityStats: PityStats | null = null;
   let fetchingStatus = '';
 
   const importTabs = [
@@ -46,6 +47,7 @@
       await migrateFromLocalStorage();
       fetchedCharacters = await getAllCharacters();
       fetchedWeapons = await getAllWeapons();
+      pityStats = await getPityStats();
       if (fetchedCharacters.length > 0 || fetchedWeapons.length > 0) {
         currentPage = 'all-headhunts';
       }
@@ -58,6 +60,7 @@
     await clearAllData();
     fetchedCharacters = [];
     fetchedWeapons = [];
+    pityStats = await getPityStats();
     currentPage = 'import';
   }
 
@@ -191,6 +194,7 @@
       await insertWeapons(fetchedWeapons);
       fetchingStatus = 'Recalculating global pity records...';
       await recalculateAllPity();
+      pityStats = await getPityStats();
       currentPage = 'all-headhunts';
     })
     .catch((err: any) => {
@@ -554,6 +558,7 @@
           isWeaponView={currentPage.startsWith('weapon-banner:') || currentPage === 'all-arsenal-issues'}
           bannerId={activeBannerId}
           onExport={handleExport}
+          pityStats={pityStats}
         />
       {/if}
       </div>

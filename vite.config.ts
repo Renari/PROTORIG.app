@@ -2,12 +2,14 @@
 import { defineConfig } from 'vitest/config'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
+import { jsonX } from 'vite-plugin-jsonx'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     tailwindcss(),
-    svelte()
+    svelte(),
+    jsonX()
   ],
   server: {
     headers: {

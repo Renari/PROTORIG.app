@@ -38,15 +38,16 @@
   import gachaWeaponExploreBtnIcon from './assets/icons/gachaweapon_explorebtn_icon.png';
   import gachaPoolIconHeadhuntWeapon from './assets/icons/gachapool_headhunt_weapon_icon.png';
   import type { GachaRecordItem } from './lib/api';
+  import type { PityStats } from './lib/db';
   import {
     CHARACTER_GACHA_POOL_TYPES,
     DUPLICATE_GUARANTEE_LIMIT,
     GUARANTEE_LIMIT as CHARACTER_GUARANTEE_LIMIT,
     KNOWN_BANNERS,
     PITY_LIMIT,
+    WEAPON_PITY_LIMIT,
     WEAPON_DUPLICATE_GUARANTEE_LIMIT,
     WEAPON_GUARANTEE_LIMIT,
-    getPoolTypeForItem,
     itemMatchesBanner,
     type BannerInfo
   } from './lib/banners';
@@ -55,6 +56,7 @@
   export let bannerId: string = 'all';
   export let isWeaponView: boolean = false;
   export let onExport: () => void;
+  export let pityStats: PityStats | null = null;
 
   // Rarity filter state: default shows 5 and 6 only
   let showRarity6 = true;
@@ -69,7 +71,7 @@
       return {
         id: 'all',
         poolType: '',
-        label: isWeaponView ? 'All Arsenal Issues' : 'All Headhunting'
+        poolName: isWeaponView ? 'All Arsenal Issues' : 'All Headhunting'
       } as BannerInfo;
     }
     return KNOWN_BANNERS.find(b => b.id === bannerId) || KNOWN_BANNERS[0];
@@ -102,56 +104,25 @@
     if (currentBanner.poolType !== CHARACTER_GACHA_POOL_TYPES.SPECIAL && !isWeaponView) {
       return { count: 0, limit: CHARACTER_GUARANTEE_LIMIT };
     } 
-    // Sort oldest-to-newest to simulate pulls sequentially
-    const chronologicallySorted = [...filteredByBanner].sort((a, b) => Number(a.seqId) - Number(b.seqId));
-    let count = 0;
     let limit = isWeaponView ? WEAPON_GUARANTEE_LIMIT : CHARACTER_GUARANTEE_LIMIT;
     let limit_dup = isWeaponView ? WEAPON_DUPLICATE_GUARANTEE_LIMIT : DUPLICATE_GUARANTEE_LIMIT;
-    for (const item of chronologicallySorted) {
-      if (('isFree' in item) && item.isFree) continue;
-      count++;
-      const id = ('charId' in item) ? item.charId : item.weaponId;
-      if (id === currentBanner.featured) {
-        count = 0;
-        limit = limit_dup;
-      }
+
+    const count = pityStats?.guarantees[currentBanner.id] || 0;
+    
+    // UI still needs to know if the limit is the duplicate context
+    const hasFeatured = filteredByBanner.some(i => ('charId' in i ? i.charId : i.weaponId) === currentBanner.featured);
+    if (hasFeatured) {
+      limit = limit_dup;
     }
+
     return { count, limit };
   })();
 
-  let specialPity = 0;
-  let standardPity = 0;
-  let beginnerPity = 0;
-
-  // Compute pity for all pool types in a single pass over once-sorted items.
-  // Uses the unfiltered `items` array because pity is global per pool type,
-  // not scoped to the currently selected banner view.
-  $: {
-    const itemsByNewest = [...items].sort((a, b) => Number(b.seqId) - Number(a.seqId));
-
-      const pityState: Record<string, { count: number; done: boolean }> = {
-        E_CharacterGachaPoolType_Special: { count: 0, done: false },
-        E_CharacterGachaPoolType_Standard: { count: 0, done: false },
-        E_CharacterGachaPoolType_Beginner: { count: 0, done: false }
-      };
-
-      for (const item of itemsByNewest) {
-        const poolType = getPoolTypeForItem(item);
-        if (!poolType) continue;
-        const state = pityState[poolType];
-        if (!state || state.done) continue;
-
-        if (item.rarity === 6) {
-          state.done = true;
-        } else if (!('isFree' in item) || !item.isFree) {
-          state.count++;
-        }
-      }
-
-      specialPity = pityState.E_CharacterGachaPoolType_Special.count;
-      standardPity = pityState.E_CharacterGachaPoolType_Standard.count;
-      beginnerPity = pityState.E_CharacterGachaPoolType_Beginner.count;
-    }
+  // Retrieve global DB-computed tracking values
+  $: specialPity = pityStats?.poolTypes[CHARACTER_GACHA_POOL_TYPES.SPECIAL]?.pity6 || 0;
+  $: standardPity = pityStats?.poolTypes[CHARACTER_GACHA_POOL_TYPES.STANDARD]?.pity6 || 0;
+  $: beginnerPity = pityStats?.poolTypes[CHARACTER_GACHA_POOL_TYPES.BEGINNER]?.pity6 || 0;
+  $: weaponPity = isWeaponView && bannerId !== 'all' ? (pityStats?.poolTypes[currentBanner.id]?.pity6 || 0) : 0;
   function formatDate(tsMs: string) {
     const d = new Date(Number(tsMs));
     return d.toLocaleString(undefined, {
@@ -183,7 +154,7 @@
           on:click={() => activeSpecialId = sp.id}
           class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 {activeSpecialId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
         >
-          {sp.label}
+          {sp.poolName}
         </button>
       {/each}
     </div>
@@ -194,11 +165,11 @@
     <!-- Banner Hero / Title -->
     {#if bannerImageUrl}
       <div class="rounded-2xl overflow-hidden shadow-2xl border border-zinc-700/50 flex items-center justify-center bg-zinc-900/50">
-        <img src={bannerImageUrl} alt={currentBanner.label} class="w-full h-auto object-contain block" />
+        <img src={bannerImageUrl} alt={currentBanner.poolName} class="w-full h-auto object-contain block" />
       </div>
     {:else}
       <div class="flex items-center justify-between xl:col-span-2">
-        <h2 class="text-2xl md:text-3xl font-extrabold text-white">{currentBanner.label}</h2>
+        <h2 class="text-2xl md:text-3xl font-extrabold text-white">{currentBanner.poolName}</h2>
       </div>
     {/if}
 
@@ -252,6 +223,8 @@
                 {standardPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
               {:else if currentBanner.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL}
                 {specialPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
+              {:else if isWeaponView && bannerId !== 'all'}
+                {weaponPity}<span class="text-zinc-400">/{WEAPON_PITY_LIMIT}</span>
               {/if}
             </p>
           </div>

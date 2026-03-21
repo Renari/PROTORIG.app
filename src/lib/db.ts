@@ -1,6 +1,6 @@
 import { connect, type Database } from '@tursodatabase/database-wasm/bundle';
 import type { EndfieldGachaCharacter, EndfieldGachaWeapon, EndfieldGachaWeaponPool } from './api';
-import { CHARACTER_GACHA_POOL_TYPES } from './banners';
+import { CHARACTER_GACHA_POOL_TYPES, KNOWN_BANNERS } from './banners';
 
 let db: Database | null = null;
 
@@ -84,16 +84,18 @@ export async function initDb(): Promise<void> {
   await seedPoolType.run(CHARACTER_GACHA_POOL_TYPES.STANDARD, 0, 0);
   await seedPoolType.run(CHARACTER_GACHA_POOL_TYPES.BEGINNER, 0, 0);
 
-  // Seed pools (idempotent via INSERT OR IGNORE)
+  // Seed pools dynamically from JSON config (idempotent via INSERT OR IGNORE)
   const seedPool = db.prepare(
     'INSERT OR IGNORE INTO pools (id, type, pool_name, featured, guarantee) VALUES (?, ?, ?, ?, ?)'
   );
-  await seedPool.run('special_1_1_1', CHARACTER_GACHA_POOL_TYPES.SPECIAL, "River's Daughter", 'chr_0027_tangtang', 0);
-  await seedPool.run('special_1_0_2', CHARACTER_GACHA_POOL_TYPES.SPECIAL, 'Hues of Passion', 'chr_0017_yvonne', 0);
-  await seedPool.run('special_1_0_3', CHARACTER_GACHA_POOL_TYPES.SPECIAL, 'The Floaty Messenger', 'chr_0013_aglina', 0);
-  await seedPool.run('special_1_0_1', CHARACTER_GACHA_POOL_TYPES.SPECIAL, 'Scars of the Forge', 'chr_0016_laevat', 0);
-  await seedPool.run('standard', CHARACTER_GACHA_POOL_TYPES.STANDARD, 'Basic Headhunting', null, null);
-  await seedPool.run('beginner', CHARACTER_GACHA_POOL_TYPES.BEGINNER, 'New Horizons', null, null);
+  for (const banner of KNOWN_BANNERS) {
+    if (banner.poolType === "weapon") {
+      await seedPoolType.run(banner.id, 0, 0);
+      await seedPool.run(banner.id, banner.id, banner.poolName, banner.featured, 0);
+    } else {
+      await seedPool.run(banner.id, banner.poolType, banner.poolName, banner.featured || null, 0);
+    }
+  }
 }
 
 /**
@@ -366,4 +368,31 @@ export async function recalculateAllPity(): Promise<void> {
   });
 
   await tx();
+}
+
+export interface PityStats {
+  poolTypes: Record<string, { pity6: number; pity5: number }>;
+  guarantees: Record<string, number>;
+}
+
+/**
+ * Returns the current running totals of pity and guarantee across all pools and pool types.
+ */
+export async function getPityStats(): Promise<PityStats> {
+  if (!db) return { poolTypes: {}, guarantees: {} };
+
+  const poolTypeRows = await db.prepare('SELECT id, pity_6, pity_5 FROM pool_type').all();
+  const poolRows = await db.prepare('SELECT id, guarantee FROM pools').all();
+
+  const poolTypes: Record<string, { pity6: number; pity5: number }> = {};
+  for (const r of poolTypeRows) {
+    poolTypes[String(r.id)] = { pity6: Number(r.pity_6), pity5: Number(r.pity_5) };
+  }
+
+  const guarantees: Record<string, number> = {};
+  for (const r of poolRows) {
+    guarantees[String(r.id)] = Number(r.guarantee || 0);
+  }
+
+  return { poolTypes, guarantees };
 }
