@@ -157,6 +157,40 @@
     if (rarity === 4) return 'hover:bg-[#9451f8]/2 border-l-2 border-l-[#9451f8]';
     return 'hover:bg-zinc-700/20 border-l-2 border-l-transparent';
   }
+
+  function getPityColorClass(pity: number, isWeapon: boolean, rarity: number): string {
+    if (rarity === 5) {
+      if (pity > 8) return 'text-[#ff2a2a]';
+      if (pity >= 5) return 'text-[#ffff00]';
+      return 'text-[#39ff14]';
+    }
+    if (isWeapon) {
+      if (pity > 32) return 'text-[#ff2a2a]';
+      if (pity > 16) return 'text-[#ffff00]';
+      return 'text-[#39ff14]';
+    } else {
+      if (pity >= 65) return 'text-[#ff2a2a]';
+      if (pity > 32) return 'text-[#ffff00]';
+      return 'text-[#39ff14]';
+    }
+  }
+
+  function getPityBgClass(pity: number, isWeapon: boolean, rarity: number): string {
+    if (rarity === 5) {
+      if (pity > 8) return 'bg-[#ff2a2a]/10 border-[#ff2a2a]/20 text-[#ff2a2a]';
+      if (pity >= 5) return 'bg-[#ffff00]/10 border-[#ffff00]/20 text-[#ffff00]';
+      return 'bg-[#39ff14]/10 border-[#39ff14]/20 text-[#39ff14]';
+    }
+    if (isWeapon) {
+      if (pity > 32) return 'bg-[#ff2a2a]/10 border-[#ff2a2a]/20 text-[#ff2a2a]';
+      if (pity > 16) return 'bg-[#ffff00]/10 border-[#ffff00]/20 text-[#ffff00]';
+      return 'bg-[#39ff14]/10 border-[#39ff14]/20 text-[#39ff14]';
+    } else {
+      if (pity >= 65) return 'bg-[#ff2a2a]/10 border-[#ff2a2a]/20 text-[#ff2a2a]';
+      if (pity > 32) return 'bg-[#ffff00]/10 border-[#ffff00]/20 text-[#ffff00]';
+      return 'bg-[#39ff14]/10 border-[#39ff14]/20 text-[#39ff14]';
+    }
+  }
 </script>
 
 <div class="space-y-6" style="animation: fadeInUp 0.5s ease-out forwards;">
@@ -324,7 +358,7 @@
           <tr class="bg-zinc-900/60 text-zinc-400 text-xs uppercase tracking-wider border-b border-zinc-700/50">
             <th class="px-5 py-3.5 font-semibold">#</th>
             <th class="px-5 py-3.5 font-semibold">Character</th>
-            <th class="px-5 py-3.5 font-semibold">Rarity</th>
+            <th class="px-5 py-3.5 font-semibold">Pity</th>
             <th class="px-5 py-3.5 font-semibold">Banner</th>
             <th class="px-5 py-3.5 font-semibold">Date</th>
           </tr>
@@ -338,7 +372,7 @@
                 class="px-5 py-3 flex items-center gap-2.5 whitespace-nowrap {bgImage ? '!pl-0' : ''}"
                 style={bgImage ? `background-image: url(${bgImage}); background-position: left center; background-repeat: no-repeat; background-size: contain;` : ''}
               >
-                <span class="font-bold text-zinc-100 {bgImage ? 'pl-14' : ''}">
+                <span class="font-bold {item.rarity === 6 ? 'text-[#ff7000]' : item.rarity === 5 ? 'text-[#ffba03]' : 'text-[#9451f8]'} {bgImage ? 'pl-14' : ''}">
                   {'charName' in item ? item.charName : item.weaponName}
                 </span>
                 {#if item.isNew}
@@ -349,14 +383,10 @@
                 {/if}
               </td>
               <td class="px-5 py-3">
-                {#if item.rarity === 6}
-                  <span class="text-[#ff7000] font-bold text-sm flex items-center gap-0.5">{item.rarity}<Icon icon="ph:star-fill" class="text-xs ml-0.5" /></span>
-                {:else if item.rarity === 5}
-                  <span class="text-[#ffba03] font-bold text-sm flex items-center gap-0.5">{item.rarity}<Icon icon="ph:star-fill" class="text-xs ml-0.5" /></span>
-                {:else if item.rarity === 4}
-                  <span class="text-[#9451f8] font-bold text-sm flex items-center gap-0.5">{item.rarity}<Icon icon="ph:star-fill" class="text-xs ml-0.5" /></span>
+                {#if item.pity}
+                  <span class="{getPityColorClass(item.pity, 'weaponId' in item, item.rarity)} font-bold text-sm flex items-center gap-0.5">{item.pity}</span>
                 {:else}
-                  <span class="text-zinc-500 text-sm flex items-center gap-0.5">{item.rarity}<Icon icon="ph:star-fill" class="text-xs ml-0.5" /></span>
+                  <span class="text-zinc-600 text-sm flex items-center gap-0.5">-</span>
                 {/if}
               </td>
               <td class="px-5 py-3 text-sm text-zinc-400">{item.poolName}</td>
@@ -384,7 +414,7 @@
               class="flex items-center gap-2.5 py-1 whitespace-nowrap"
               style={bgImage ? `background-image: url(${bgImage}); background-position: left center; background-repeat: no-repeat; background-size: contain;` : ''}
             >
-              <span class="font-bold text-base text-zinc-100 {bgImage ? 'pl-9' : ''}">
+              <span class="font-bold text-base {item.rarity === 6 ? 'text-[#ff7000]' : item.rarity === 5 ? 'text-[#ffba03]' : 'text-[#9451f8]'} {bgImage ? 'pl-9' : ''}">
                 {'charName' in item ? item.charName : item.weaponName}
               </span>
               {#if item.isNew}
@@ -396,14 +426,10 @@
             </div>
             
             <div class="flex items-center gap-2">
-              {#if item.rarity === 6}
-                <span class="text-[#ff7000] font-extrabold text-sm flex items-center gap-0.5 bg-[#ff7000]/10 px-2 py-0.5 rounded-md border border-[#ff7000]/20">{item.rarity}<Icon icon="ph:star-fill" class="text-xs ml-0.5" /></span>
-              {:else if item.rarity === 5}
-                <span class="text-[#ffba03] font-bold text-sm flex items-center gap-0.5 bg-[#ffba03]/10 px-2 py-0.5 rounded-md border border-[#ffba03]/20">{item.rarity}<Icon icon="ph:star-fill" class="text-xs ml-0.5" /></span>
-              {:else if item.rarity === 4}
-                <span class="text-[#9451f8] font-bold text-sm flex items-center gap-0.5 bg-[#9451f8]/10 px-2 py-0.5 rounded-md border border-[#9451f8]/20">{item.rarity}<Icon icon="ph:star-fill" class="text-xs ml-0.5" /></span>
-              {:else}
-                <span class="text-zinc-500 text-sm flex items-center gap-0.5 bg-zinc-800 px-2 py-0.5 rounded-md border border-zinc-700">{item.rarity}<Icon icon="ph:star-fill" class="text-xs ml-0.5" /></span>
+              {#if item.pity}
+                <span class="{getPityBgClass(item.pity, 'weaponId' in item, item.rarity)} {item.rarity === 6 ? 'font-extrabold' : 'font-bold'} text-sm flex items-center gap-1 px-2 py-0.5 rounded-md border">
+                  <span class="text-[10px] uppercase tracking-wider opacity-80">Pity</span> {item.pity}
+                </span>
               {/if}
             </div>
           </div>
