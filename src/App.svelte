@@ -28,6 +28,7 @@
   let fetchedWeapons: EndfieldGachaWeapon[] = [];
   let pityStats: PityStats | null = null;
   let fetchingStatus = '';
+  let dbLockedError = false;
 
   const importTabs = [
     { id: 'windows' as const, label: 'Windows', icon: 'ph:windows-logo-bold' },
@@ -51,8 +52,17 @@
       if (fetchedCharacters.length > 0 || fetchedWeapons.length > 0) {
         currentPage = 'all-headhunts';
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to initialize database:', err);
+      const isLockError = err.name === 'NoModificationAllowedError' 
+        || err.name === 'DOMException'
+        || err.message?.includes('Access Handles cannot be created')
+        || err.message?.includes('No modification allowed') 
+        || err.message?.includes('lock');
+        
+      if (isLockError) {
+        dbLockedError = true;
+      }
     }
   });
 
@@ -211,6 +221,15 @@
     : 'all';
 </script>
 
+{#if dbLockedError}
+  <div class="flex flex-col items-center justify-center h-screen bg-zinc-950 text-white p-6" style="animation: fadeInUp 0.5s ease-out forwards;">
+    <Icon icon="ph:warning-duotone" class="text-6xl text-red-500 mb-6" />
+    <h1 class="text-2xl md:text-3xl font-extrabold mb-4 text-center">Application Already Open</h1>
+    <p class="text-zinc-400 text-center max-w-md leading-relaxed">
+      The local database can only be accessed by one tab at a time. Please close any other tabs running PROTORIG.app and refresh this page.
+    </p>
+  </div>
+{:else}
 <div class="flex h-screen overflow-hidden bg-zinc-950 text-zinc-200">
   <!-- Mobile overlay -->
   {#if sidebarOpen}
@@ -560,6 +579,7 @@
     </div>
   </main>
 </div>
+{/if}
 
 <style>
   @keyframes fadeInUp {
