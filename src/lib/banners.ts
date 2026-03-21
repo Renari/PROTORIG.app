@@ -1,9 +1,10 @@
 import type { GachaRecordItem } from './api';
+/// <reference types="vite-plugin-jsonx/client" />
 
 export interface BannerInfo {
   id: string;
   poolType: string;
-  label: string;
+  poolName: string;
   /**
    * Optional ID of the featured character or weapon for this banner.
    * Must match `EndfieldGachaCharacter.charId` or `EndfieldGachaWeapon.weaponId` and is typically only set for
@@ -28,42 +29,9 @@ export enum CHARACTER_GACHA_POOL_TYPES {
  * `poolType` corresponds to `E_CharacterGachaPoolType_*` from the API. 
  * This list must be sorted from the most recent banner to the least recent banner.
  */
-export const KNOWN_BANNERS: BannerInfo[] = [
-  {
-    id: 'special_1_1_1',
-    poolType: 'E_CharacterGachaPoolType_Special',
-    label: 'River\'s Daughter',
-    featured: 'chr_0027_tangtang',
-  },
-  {
-    id: 'special_1_0_2',
-    poolType: 'E_CharacterGachaPoolType_Special',
-    label: 'Hues of Passion',
-    featured: 'chr_0017_yvonne',
-  },
-  {
-    id: 'special_1_0_3',
-    poolType: 'E_CharacterGachaPoolType_Special',
-    label: 'The Floaty Messenger',
-    featured: 'chr_0013_aglina',
-  },
-  {
-    id: 'special_1_0_1',
-    poolType: 'E_CharacterGachaPoolType_Special',
-    label: 'Scars of the Forge',
-    featured: 'chr_0016_laevat',
-  },
-  {
-    id: 'standard',
-    poolType: 'E_CharacterGachaPoolType_Standard',
-    label: 'Basic Headhunting',
-  },
-  {
-    id: 'beginner',
-    poolType: 'E_CharacterGachaPoolType_Beginner',
-    label: 'New Horizons',
-  },
-];
+import bannersData from './banners.jsonc';
+
+export const KNOWN_BANNERS: BannerInfo[] = bannersData as unknown as BannerInfo[];
 
 /** Hard pity limit shared across all pool types. */
 export const PITY_LIMIT = 80;
@@ -88,7 +56,7 @@ export function itemMatchesBanner(item: GachaRecordItem, banner: BannerInfo): bo
 
   // Fallback to poolName for older imports that might have an incorrect poolId
   const itemPoolNameLower = (item.poolName || '').toLowerCase();
-  const bannerLabelLower = banner.label.toLowerCase();
+  const bannerLabelLower = banner.poolName.toLowerCase();
 
   if (banner.poolType === CHARACTER_GACHA_POOL_TYPES.STANDARD) {
     return itemPoolIdLower.includes('standard') || itemPoolNameLower.includes('standard') || itemPoolNameLower.includes('basic headhunting');
@@ -99,15 +67,4 @@ export function itemMatchesBanner(item: GachaRecordItem, banner: BannerInfo): bo
 
   // Try to match by label when poolId isn't an exact match
   return itemPoolNameLower.includes(bannerLabelLower);
-}
-
-/**
- * Determines the pool type for a given gacha item by checking it against
- * all known banners. Returns null if no match is found.
- */
-export function getPoolTypeForItem(item: GachaRecordItem): string | null {
-  for (const banner of KNOWN_BANNERS) {
-    if (itemMatchesBanner(item, banner)) return banner.poolType;
-  }
-  return null;
 }
