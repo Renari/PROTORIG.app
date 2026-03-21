@@ -284,7 +284,10 @@ export async function recalculateAllPity(): Promise<void> {
 
       charUpdates.push({ seq_id: Number(pull.seq_id), pity: assignedPity });
 
-      if (rarity === 6) pity6 = 0;
+      if (rarity === 6) {
+        pity6 = 0;
+        pity5 = 0;
+      }
       if (rarity === 5) pity5 = 0;
 
       if (featuredMap[poolId] && charId === featuredMap[poolId]) {
@@ -337,7 +340,10 @@ export async function recalculateAllPity(): Promise<void> {
 
       weaponUpdates.push({ seq_id: Number(pull.seq_id), pity: assignedPity });
 
-      if (rarity === 6) pity6 = 0;
+      if (rarity === 6) {
+        pity6 = 0;
+        pity5 = 0;
+      }
       if (rarity === 5) pity5 = 0;
       if (featured && weaponId === featured) guarantee = 0;
     }
