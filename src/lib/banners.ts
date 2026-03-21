@@ -1,5 +1,5 @@
-import type { GachaRecordItem } from './api';
 /// <reference types="vite-plugin-jsonx/client" />
+import type { GachaRecordItem } from './api';
 
 export interface BannerInfo {
   id: string;
