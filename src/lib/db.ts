@@ -99,6 +99,20 @@ export async function initDb(): Promise<void> {
 }
 
 /**
+ * Close the database and instantly surrender OPFS access handles.
+ */
+export async function closeDb(): Promise<void> {
+  if (db) {
+    try {
+      db.close();
+    } catch (err) {
+      // Ignored
+    }
+    db = null;
+  }
+}
+
+/**
  * Get the database instance. Throws if not initialized.
  */
 export function getDb(): Database {
