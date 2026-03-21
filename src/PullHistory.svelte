@@ -64,7 +64,12 @@
   let showRarity4 = false;
 
   const specialBanners = KNOWN_BANNERS.filter(b => b.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL);
+  const specialWeaponBanners = KNOWN_BANNERS.filter(b => b.poolType === 'weapon' && !b.id.startsWith('weaponbox_constant'));
+  const standardWeaponBanners = KNOWN_BANNERS.filter(b => b.poolType === 'weapon' && b.id.startsWith('weaponbox_constant'));
+  
   let activeSpecialId = specialBanners[0]?.id || '';
+  let activeWeaponSpecialId = specialWeaponBanners[0]?.id || '';
+  let activeWeaponStandardId = standardWeaponBanners[0]?.id || '';
 
   $: currentBanner = (() => {
     if (bannerId === 'all') {
@@ -73,6 +78,15 @@
         poolType: '',
         poolName: isWeaponView ? 'All Arsenal Issues' : 'All Headhunting'
       } as BannerInfo;
+    }
+    if (bannerId === 'special-headhunting') {
+      return KNOWN_BANNERS.find(b => b.id === activeSpecialId) || specialBanners[0];
+    }
+    if (bannerId === 'special-arsenal') {
+      return KNOWN_BANNERS.find(b => b.id === activeWeaponSpecialId) || specialWeaponBanners[0];
+    }
+    if (bannerId === 'standard-arsenal') {
+      return KNOWN_BANNERS.find(b => b.id === activeWeaponStandardId) || standardWeaponBanners[0];
     }
     return KNOWN_BANNERS.find(b => b.id === bannerId) || KNOWN_BANNERS[0];
   })();
@@ -153,6 +167,28 @@
         <button
           on:click={() => activeSpecialId = sp.id}
           class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 {activeSpecialId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
+        >
+          {sp.poolName}
+        </button>
+      {/each}
+    </div>
+  {:else if bannerId === 'special-arsenal'}
+    <div class="flex flex-wrap items-center gap-2 p-1.5 bg-zinc-800/80 rounded-xl border border-zinc-700/50 shadow-sm backdrop-blur-xl">
+      {#each specialWeaponBanners as sp}
+        <button
+          on:click={() => activeWeaponSpecialId = sp.id}
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 {activeWeaponSpecialId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
+        >
+          {sp.poolName}
+        </button>
+      {/each}
+    </div>
+  {:else if bannerId === 'standard-arsenal'}
+    <div class="flex flex-wrap items-center gap-2 p-1.5 bg-zinc-800/80 rounded-xl border border-zinc-700/50 shadow-sm backdrop-blur-xl">
+      {#each standardWeaponBanners as sp}
+        <button
+          on:click={() => activeWeaponStandardId = sp.id}
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 {activeWeaponStandardId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
         >
           {sp.poolName}
         </button>

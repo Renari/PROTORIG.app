@@ -4,6 +4,7 @@
   import Icon from '@iconify/svelte';
   import type { EndfieldGachaCharacter, EndfieldGachaWeapon } from './lib/api';
   import gachaWeaponExploreBtnIcon from './assets/icons/gachaweapon_explorebtn_icon.png';
+  import gachaPoolHeadhuntWeaponIcon from './assets/icons/gachapool_headhunt_weapon_icon.png';
   import btnRaffle2 from './assets/icons/btn_raffle_2.png';
 
   export let characters: EndfieldGachaCharacter[];
@@ -75,6 +76,11 @@
     { id: 'standard', label: 'Basic Headhunting' },
     { id: 'beginner', label: 'New Horizons' }
   ];
+
+  const weaponCategories = [
+    { id: 'special-arsenal', label: 'Special Arsenal' },
+    { id: 'standard-arsenal', label: 'Standard Arsenal' }
+  ];
 </script>
 
 <aside
@@ -111,7 +117,7 @@
         {#if active}
           <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1/2 bg-primary-500 rounded-r-md"></div>
         {/if}
-        <Icon icon={item.icon} class="text-lg flex-shrink-0 {active ? 'text-primary-400' : ''}" />
+        <Icon icon={item.icon} class="text-lg flex-shrink-0 {active ? 'text-[#f7e704]' : ''}" />
         <span>{item.label}</span>
       </button>
     {/each}
@@ -129,6 +135,27 @@
             <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1/2 bg-primary-500 rounded-r-md"></div>
           {/if}
           <img src={bannerActive ? btnRaffle2 : gachaWeaponExploreBtnIcon} alt="" class="h-[18px] w-[18px] object-contain flex-shrink-0 {bannerActive ? 'scale-175' : 'scale-150 opacity-70 group-hover:opacity-100'}" />
+          <span class="truncate">{cat.label}</span>
+        </button>
+      {/each}
+    </div>
+
+    <div class="pt-4">
+      <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-3 mb-2">Arsenal Exchange</p>
+      {#each weaponCategories as cat (cat.id)}
+        {@const bannerActive = currentPage === `banner:${cat.id}`}
+        <button
+          on:click={() => handleNav(`banner:${cat.id}`)}
+          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group border relative overflow-hidden
+            {bannerActive ? 'bg-zinc-800 text-white border-zinc-700/50 shadow-sm' : 'text-zinc-400 border-transparent hover:bg-zinc-800/50 hover:text-zinc-200'}"
+        >
+          {#if bannerActive}
+            <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1/2 bg-primary-500 rounded-r-md"></div>
+          {/if}
+          <img src={gachaPoolHeadhuntWeaponIcon} alt="" 
+            class="h-[18px] w-[18px] object-contain flex-shrink-0 scale-120 mt-1 {bannerActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}" 
+            style={bannerActive ? 'filter: brightness(0) saturate(100%) invert(84%) sepia(87%) saturate(1048%) hue-rotate(359deg) brightness(101%) contrast(106%);' : ''}
+          />
           <span class="truncate">{cat.label}</span>
         </button>
       {/each}

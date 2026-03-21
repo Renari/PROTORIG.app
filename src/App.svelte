@@ -554,8 +554,8 @@
       {:else if currentPage === 'all-headhunts' || currentPage.startsWith('banner:') || currentPage === 'all-arsenal-issues' || currentPage.startsWith('weapon-banner:')}
         <!-- Pull History View -->
         <PullHistory
-          items={currentPage.startsWith('weapon-banner:') || currentPage === 'all-arsenal-issues' ? fetchedWeapons : fetchedCharacters}
-          isWeaponView={currentPage.startsWith('weapon-banner:') || currentPage === 'all-arsenal-issues'}
+          items={currentPage === 'banner:special-arsenal' || currentPage === 'banner:standard-arsenal' || currentPage.startsWith('weapon-banner:') || currentPage === 'all-arsenal-issues' ? fetchedWeapons : fetchedCharacters}
+          isWeaponView={currentPage === 'banner:special-arsenal' || currentPage === 'banner:standard-arsenal' || currentPage.startsWith('weapon-banner:') || currentPage === 'all-arsenal-issues'}
           bannerId={activeBannerId}
           onExport={handleExport}
           pityStats={pityStats}
