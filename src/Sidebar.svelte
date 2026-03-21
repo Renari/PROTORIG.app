@@ -79,7 +79,7 @@
 
   const weaponCategories = [
     { id: 'special-arsenal', label: 'Special Arsenal' },
-    { id: 'standard-arsenal', label: 'Standard Arsenal' }
+    { id: 'basic-arsenal', label: 'Basic Arsenal' }
   ];
 </script>
 
