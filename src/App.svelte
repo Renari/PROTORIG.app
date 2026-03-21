@@ -170,8 +170,6 @@
     errorMsg = '';
     fetchingStatus = 'Initializing secure WebAssembly proxy...';
 
-    let weaponPools: Awaited<ReturnType<typeof fetchWeaponPools>> = [];
-
     fetchAllCharacters(currentToken, serverId, lang, (pool, count) => {
       fetchingStatus = `Scanning character pool ${pool}... Found ${count} pulls.`;
     })
