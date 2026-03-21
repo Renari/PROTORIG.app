@@ -168,8 +168,6 @@
   function startFetching(currentToken: string, serverId: string, lang: string) {
     isFetching = true;
     errorMsg = '';
-    fetchedCharacters = [];
-    fetchedWeapons = [];
     fetchingStatus = 'Initializing secure WebAssembly proxy...';
 
     let weaponPools: Awaited<ReturnType<typeof fetchWeaponPools>> = [];
@@ -177,24 +175,23 @@
     fetchAllCharacters(currentToken, serverId, lang, (pool, count) => {
       fetchingStatus = `Scanning character pool ${pool}... Found ${count} pulls.`;
     })
-    .then((chars) => {
-      fetchedCharacters = chars;
+    .then(async (chars) => {
+      await insertCharacters(chars);
       return fetchWeaponPools(currentToken, serverId, lang);
     })
-    .then((pools) => {
-      weaponPools = pools;
+    .then(async (pools) => {
+      await insertWeaponPools(pools);
       return fetchAllWeapons(currentToken, serverId, lang, pools, (poolName: string, count: number) => {
         fetchingStatus = `Scanning weapon pool ${poolName}... Found ${count} pulls.`;
       });
     })
     .then(async (weaps) => {
-      fetchedWeapons = weaps;
-      await insertCharacters(fetchedCharacters);
-      await insertWeaponPools(weaponPools);
-      await insertWeapons(fetchedWeapons);
+      await insertWeapons(weaps);
       fetchingStatus = 'Recalculating global pity records...';
       await recalculateAllPity();
       pityStats = await getPityStats();
+      fetchedCharacters = await getAllCharacters();
+      fetchedWeapons = await getAllWeapons();
       currentPage = 'all-headhunts';
     })
     .catch((err: any) => {
