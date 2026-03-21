@@ -267,7 +267,7 @@
           {#if currentBanner.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL}
             <div class="flex flex-col items-center">
               <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Guarantee</p>
-              <p class="font-bold tfeaturedx items-baseline justify-center gap-0.5 {bannerImageUrl ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
+              <p class="font-bold text-[#ef4444] items-baseline justify-center gap-0.5 {bannerImageUrl ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
                 {#if currentBanner.featured}
                   {guarantee.count}<span class="text-zinc-400">/{guarantee.limit}</span>
                 {:else}
