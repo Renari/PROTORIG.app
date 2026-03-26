@@ -15,14 +15,9 @@ The application consists of a frontend development server and a wisp proxy serve
 
 To run the application locally, start both the frontend development server and the backend wisp proxy in separate terminal instances:
 
-1. **Start the Frontend Development Server:**
+1. **Start the Frontend Development and Wisp Proxy Server:**
    ```bash
    npm run dev
-   ```
-
-2. **Start the Wisp Proxy Server:**
-   ```bash
-   npm run wisp
    ```
 
 The application will be accessible at `http://localhost:5173`.
