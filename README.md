@@ -11,14 +11,15 @@ A Svelte-based tool designed to help you track, filter, and analyze your gacha p
 
 ### Development
 
-The application consists of a frontend development server and a wisp proxy server (needed for handling external requests/CORS). 
+The application consists of a frontend development server and a wisp proxy server (needed for handling external requests/CORS).
 
-To run the application locally, start both the frontend development server and the backend wisp proxy in separate terminal instances:
+To run the application locally:
 
-1. **Start the Frontend Development and Wisp Proxy Server:**
-   ```bash
-   npm run dev
-   ```
+```bash
+npm run dev
+```
+
+This starts both the Vite dev server and the wisp proxy together using `concurrently`.
 
 The application will be accessible at `http://localhost:5173`.
 
