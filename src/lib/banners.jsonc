@@ -1,5 +1,11 @@
 [
   {
+    "id": "special_1_1_2",
+    "poolType": "E_CharacterGachaPoolType_Special",
+    "poolName": "Wolf Pearl",
+    "featured": "chr_0028_wulfa"
+  },
+  {
     "id": "special_1_1_1",
     "poolType": "E_CharacterGachaPoolType_Special",
     "poolName": "River's Daughter",
