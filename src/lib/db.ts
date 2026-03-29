@@ -2,6 +2,26 @@ import { connect, type Database } from '@tursodatabase/database-wasm/bundle';
 import type { EndfieldGachaCharacter, EndfieldGachaWeapon, EndfieldGachaWeaponPool } from './api';
 import { CHARACTER_GACHA_POOL_TYPES, KNOWN_BANNERS } from './banners';
 
+// Row types for SQLite query results (Turso types all rows as `any`)
+interface MaxIdRow { max_id: number | null }
+interface CharacterPullRow {
+  seq_id: number; pool_id: string; rarity: number; char_id: string;
+  char_name: string; is_free: number; is_new: number; gacha_ts: number;
+  pity: number | null; pool_name: string;
+}
+interface WeaponPullRow {
+  seq_id: number; pool_id: string; rarity: number; weapon_id: string;
+  weapon_name: string; weapon_type: string; is_new: number; gacha_ts: number;
+  pity: number | null; pool_name: string;
+}
+interface PoolRow { id: string; featured: string | null; guarantee: number }
+interface PoolTypeRow { id: string; pity_6: number; pity_5: number }
+interface CharacterPityRow {
+  seq_id: number; pool_id: string; rarity: number; char_id: string;
+  is_free: number; gacha_ts: number;
+}
+interface WeaponPityRow { seq_id: number; rarity: number; weapon_id: string }
+
 let db: Database | null = null;
 
 /**
@@ -202,7 +222,7 @@ export async function getAllCharacters(): Promise<EndfieldGachaCharacter[]> {
     SELECT * FROM character_pulls ORDER BY gacha_ts ASC
   `).all();
 
-  return rows.map((r: any) => ({
+  return (rows as CharacterPullRow[]).map((r) => ({
     seqId: String(r.seq_id),
     poolId: r.pool_id,
     poolName: r.pool_name,
@@ -224,7 +244,7 @@ export async function getAllWeapons(): Promise<EndfieldGachaWeapon[]> {
     SELECT * FROM weapon_pulls ORDER BY gacha_ts ASC
   `).all();
 
-  return rows.map((r: any) => ({
+  return (rows as WeaponPullRow[]).map((r) => ({
     seqId: String(r.seq_id),
     poolId: r.pool_id,
     poolName: r.pool_name,
@@ -236,6 +256,22 @@ export async function getAllWeapons(): Promise<EndfieldGachaWeapon[]> {
     gachaTs: String(r.gacha_ts),
     pity: r.pity,
   }));
+}
+
+/**
+ * Get the highest seqId currently stored for characters.
+ */
+export async function getMaxCharacterSeqId(): Promise<number> {
+  const row = await db!.prepare('SELECT MAX(seq_id) as max_id FROM characters').get() as MaxIdRow | undefined;
+  return Number(row?.max_id ?? 0);
+}
+
+/**
+ * Get the highest seqId currently stored for weapons.
+ */
+export async function getMaxWeaponSeqId(): Promise<number> {
+  const row = await db!.prepare('SELECT MAX(seq_id) as max_id FROM weapons').get() as MaxIdRow | undefined;
+  return Number(row?.max_id ?? 0);
 }
 
 /**
@@ -258,12 +294,12 @@ export async function recalculateAllPity(): Promise<void> {
   // --- 1. Calculate Character Pity ---
   // Characters share pity across their pool_type (e.g. SPECIAL, STANDARD)
   for (const poolType of Object.values(CHARACTER_GACHA_POOL_TYPES)) {
-    const poolsForType = await db!.prepare('SELECT id, featured FROM pools WHERE type = ?').all(poolType);
+    const poolsForType = await db!.prepare('SELECT id, featured FROM pools WHERE type = ?').all(poolType) as PoolRow[];
     const featuredMap: Record<string, string | null> = {};
     const guaranteeCounts: Record<string, number> = {};
     for (const p of poolsForType) {
-      featuredMap[String(p.id)] = p.featured ? String(p.featured) : null;
-      guaranteeCounts[String(p.id)] = 0;
+      featuredMap[p.id] = p.featured;
+      guaranteeCounts[p.id] = 0;
     }
 
     let pity6 = 0;
@@ -275,16 +311,16 @@ export async function recalculateAllPity(): Promise<void> {
       JOIN pools p ON p.id = c.pool_id
       WHERE p.type = ?
       ORDER BY c.seq_id ASC
-    `).all(poolType);
+    `).all(poolType) as CharacterPityRow[];
 
     for (const pull of pulls) {
       const isFree = pull.is_free === 1;
-      const rarity = Number(pull.rarity);
-      const poolId = String(pull.pool_id);
-      const charId = String(pull.char_id);
+      const rarity = pull.rarity;
+      const poolId = pull.pool_id;
+      const charId = pull.char_id;
 
       if (isFree) {
-        charUpdates.push({ seq_id: Number(pull.seq_id), pity: null });
+        charUpdates.push({ seq_id: pull.seq_id, pity: null });
         continue;
       }
 
@@ -296,7 +332,7 @@ export async function recalculateAllPity(): Promise<void> {
       if (rarity === 6) assignedPity = pity6;
       else if (rarity === 5) assignedPity = pity5;
 
-      charUpdates.push({ seq_id: Number(pull.seq_id), pity: assignedPity });
+      charUpdates.push({ seq_id: pull.seq_id, pity: assignedPity });
 
       if (rarity === 6) {
         pity6 = 0;
@@ -321,13 +357,13 @@ export async function recalculateAllPity(): Promise<void> {
     SELECT id FROM pool_type 
     WHERE id NOT IN (${Object.values(CHARACTER_GACHA_POOL_TYPES).map(() => '?').join(', ')})
   `;
-  const weaponPoolTypes = await db!.prepare(weaponTypeQuery).all(...Object.values(CHARACTER_GACHA_POOL_TYPES));
+  const weaponPoolTypes = await db!.prepare(weaponTypeQuery).all(...Object.values(CHARACTER_GACHA_POOL_TYPES)) as PoolTypeRow[];
 
   for (const ptRow of weaponPoolTypes) {
-    const poolType = String(ptRow.id);
+    const poolType = ptRow.id;
     const poolId = poolType; // For weapons, they are identical
-    const poolData = await db!.prepare('SELECT featured FROM pools WHERE id = ?').get(poolId);
-    const featured = poolData?.featured ? String(poolData.featured) : null;
+    const poolData = await db!.prepare('SELECT featured FROM pools WHERE id = ?').get(poolId) as PoolRow | undefined;
+    const featured = poolData?.featured ?? null;
 
     let pity6 = 0;
     let pity5 = 0;
@@ -338,11 +374,11 @@ export async function recalculateAllPity(): Promise<void> {
       FROM weapons w
       WHERE w.pool_id = ?
       ORDER BY w.seq_id ASC
-    `).all(poolId);
+    `).all(poolId) as WeaponPityRow[];
 
     for (const pull of pulls) {
-      const rarity = Number(pull.rarity);
-      const weaponId = String(pull.weapon_id);
+      const rarity = pull.rarity;
+      const weaponId = pull.weapon_id;
 
       pity6++;
       pity5++;
@@ -352,7 +388,7 @@ export async function recalculateAllPity(): Promise<void> {
       if (rarity === 6) assignedPity = pity6;
       else if (rarity === 5) assignedPity = pity5;
 
-      weaponUpdates.push({ seq_id: Number(pull.seq_id), pity: assignedPity });
+      weaponUpdates.push({ seq_id: pull.seq_id, pity: assignedPity });
 
       if (rarity === 6) {
         pity6 = 0;
@@ -401,17 +437,17 @@ export interface PityStats {
 export async function getPityStats(): Promise<PityStats> {
   if (!db) return { poolTypes: {}, guarantees: {} };
 
-  const poolTypeRows = await db.prepare('SELECT id, pity_6, pity_5 FROM pool_type').all();
-  const poolRows = await db.prepare('SELECT id, guarantee FROM pools').all();
+  const poolTypeRows = await db.prepare('SELECT id, pity_6, pity_5 FROM pool_type').all() as PoolTypeRow[];
+  const poolRows = await db.prepare('SELECT id, guarantee FROM pools').all() as PoolRow[];
 
   const poolTypes: Record<string, { pity6: number; pity5: number }> = {};
   for (const r of poolTypeRows) {
-    poolTypes[String(r.id)] = { pity6: Number(r.pity_6), pity5: Number(r.pity_5) };
+    poolTypes[r.id] = { pity6: r.pity_6, pity5: r.pity_5 };
   }
 
   const guarantees: Record<string, number> = {};
   for (const r of poolRows) {
-    guarantees[String(r.id)] = Number(r.guarantee || 0);
+    guarantees[r.id] = r.guarantee || 0;
   }
 
   return { poolTypes, guarantees };
