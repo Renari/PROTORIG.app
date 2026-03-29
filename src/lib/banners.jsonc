@@ -6,6 +6,12 @@
     "featured": "chr_0028_wulfa"
   },
   {
+    "id": "weponbox_1_1_2",
+    "poolType": "weapon",
+    "poolName": "Scarlet Pearl Issue",
+    "featured": "wpn_sword_0022"
+  },
+  {
     "id": "special_1_1_1",
     "poolType": "E_CharacterGachaPoolType_Special",
     "poolName": "River's Daughter",
