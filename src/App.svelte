@@ -3,9 +3,9 @@
   import Icon from '@iconify/svelte';
   // @ts-ignore
   import he from 'he';
-  import { fetchAllCharacters, fetchWeaponPools, fetchAllWeapons, type EndfieldGachaCharacter, type EndfieldGachaWeapon } from './lib/api';
+  import { fetchAllCharacters, fetchAllWeapons, type EndfieldGachaCharacter, type EndfieldGachaWeapon } from './lib/api';
   import { exportEGF } from './lib/egf';
-  import { initDb, closeDb, getAllCharacters, getAllWeapons, insertCharacters, insertWeapons, insertWeaponPools, clearAllData, recalculateAllPity, getPityStats, type PityStats } from './lib/db';
+  import { initDb, closeDb, getAllCharacters, getAllWeapons, insertCharacters, insertWeapons, insertWeaponPools, clearAllData, recalculateAllPity, getPityStats, getMaxCharacterSeqId, getMaxWeaponSeqId, type PityStats } from './lib/db';
   import { migrateFromLocalStorage } from './lib/db-migration';
   import Sidebar from './Sidebar.svelte';
   import PullHistory from './PullHistory.svelte';
@@ -194,22 +194,26 @@
     fetchingStatus = 'Initializing secure WebAssembly proxy...';
 
     initDb()
-      .then(() => {
+      .then(async () => {
+        const maxCharSeqId = await getMaxCharacterSeqId();
         return fetchAllCharacters(currentToken, serverId, lang, (pool, count) => {
-          fetchingStatus = `Scanning character pool ${pool}... Found ${count} pulls.`;
-        });
+          fetchingStatus = `Scanning character pool ${pool}... Found ${count} new pulls.`;
+        }, maxCharSeqId);
       })
       .then(async (chars) => {
         await insertCharacters(chars);
-        return fetchWeaponPools(currentToken, serverId, lang);
-      })
-      .then(async (pools) => {
-        await insertWeaponPools(pools);
-        return fetchAllWeapons(currentToken, serverId, lang, pools, (poolName: string, count: number) => {
-          fetchingStatus = `Scanning weapon pool ${poolName}... Found ${count} pulls.`;
-        });
+        const maxWeaponSeqId = await getMaxWeaponSeqId();
+        return fetchAllWeapons(currentToken, serverId, lang, (count: number) => {
+          fetchingStatus = `Scanning weapon pools... Found ${count} new pulls.`;
+        }, maxWeaponSeqId);
       })
       .then(async (weaps) => {
+        // Extract unique pools from weapon data for pool metadata
+        const uniquePools = new Map<string, string>();
+        for (const w of weaps) {
+          uniquePools.set(w.poolId, w.poolName);
+        }
+        await insertWeaponPools(Array.from(uniquePools, ([poolId, poolName]) => ({ poolId, poolName })));
         await insertWeapons(weaps);
         fetchingStatus = 'Recalculating global pity records...';
         await recalculateAllPity();
@@ -576,7 +580,7 @@
               <Icon icon="ph:check-circle-duotone" class="text-zinc-400 text-xl flex-shrink-0" />
               <p class="text-sm text-zinc-300">
                 You already have <strong>{fetchedCharacters.length + fetchedWeapons.length}</strong> pulls stored locally.
-                Importing again will replace your existing data.
+                Importing again will fetch any new pulls.
               </p>
             </div>
           {/if}
