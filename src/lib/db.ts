@@ -340,9 +340,6 @@ export async function recalculateAllPity(): Promise<void> {
       }
       if (rarity === 5) pity5 = 0;
 
-      if (featuredMap[poolId] && charId === featuredMap[poolId]) {
-        guaranteeCounts[poolId] = 0;
-      }
     }
 
     poolTypeUpdates.push({ id: poolType, pity_6: pity6, pity_5: pity5 });
@@ -395,7 +392,6 @@ export async function recalculateAllPity(): Promise<void> {
         pity5 = 0;
       }
       if (rarity === 5) pity5 = 0;
-      if (featured && weaponId === featured) guarantee = 0;
     }
 
     poolTypeUpdates.push({ id: poolType, pity_6: pity6, pity_5: pity5 });
