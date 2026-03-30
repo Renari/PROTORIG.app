@@ -111,25 +111,23 @@
   $: sixStarCount = filteredByBanner.filter(i => i.rarity === 6).length;
   $: fiveStarCount = filteredByBanner.filter(i => i.rarity === 5).length;
   
-  // Guarantee counter for special banners. Tracks pulls since the last copy of
-  // the featured character. First copy is guaranteed within 120 pulls; after
-  // obtaining the featured character the limit extends to 240 for the next copy.
+  // Guarantee uses the following formula:
+  //   f(p, n) = { firstLimit - n  if p < 1,  dupLimit - (n % dupLimit)  if p >= 1 }
+  // p = times the featured was obtained, n = total non-free pulls on this banner.
   $: guarantee = (() => {
     if (currentBanner.poolType !== CHARACTER_GACHA_POOL_TYPES.SPECIAL && !isWeaponView) {
-      return { count: 0, limit: CHARACTER_GUARANTEE_LIMIT };
-    } 
-    let limit = isWeaponView ? WEAPON_GUARANTEE_LIMIT : CHARACTER_GUARANTEE_LIMIT;
-    let limit_dup = isWeaponView ? WEAPON_DUPLICATE_GUARANTEE_LIMIT : DUPLICATE_GUARANTEE_LIMIT;
-
-    const count = pityStats?.guarantees[currentBanner.id] || 0;
-    
-    // UI still needs to know if the limit is the duplicate context
-    const hasFeatured = filteredByBanner.some(i => ('charId' in i ? i.charId : i.weaponId) === currentBanner.featured);
-    if (hasFeatured) {
-      limit = limit_dup;
+      return 0;
     }
+    const firstLimit = isWeaponView ? WEAPON_GUARANTEE_LIMIT : CHARACTER_GUARANTEE_LIMIT;
+    const dupLimit = isWeaponView ? WEAPON_DUPLICATE_GUARANTEE_LIMIT : DUPLICATE_GUARANTEE_LIMIT;
 
-    return { count, limit };
+    const n = pityStats?.guarantees[currentBanner.id] || 0;
+    const p = filteredByBanner.filter(i => ('charId' in i ? i.charId : i.weaponId) === currentBanner.featured).length;
+
+    if (p < 1) {
+      return firstLimit - n;
+    }
+    return dupLimit - (n % dupLimit);
   })();
 
   // Retrieve global DB-computed tracking values
@@ -298,12 +296,12 @@
               {/if}
             </p>
           </div>
-          {#if currentBanner.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL}
+          {#if currentBanner.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL || (isWeaponView && bannerId !== 'all')}
             <div class="flex flex-col items-center">
               <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Guarantee</p>
               <p class="font-bold text-[#ef4444] items-baseline justify-center gap-0.5 {bannerImageUrl ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
                 {#if currentBanner.featured}
-                  {guarantee.count}<span class="text-zinc-400">/{guarantee.limit}</span>
+                  {guarantee}
                 {:else}
                   <span class="text-zinc-400">N/A</span>
                 {/if}

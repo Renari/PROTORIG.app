@@ -295,10 +295,8 @@ export async function recalculateAllPity(): Promise<void> {
   // Characters share pity across their pool_type (e.g. SPECIAL, STANDARD)
   for (const poolType of Object.values(CHARACTER_GACHA_POOL_TYPES)) {
     const poolsForType = await db!.prepare('SELECT id, featured FROM pools WHERE type = ?').all(poolType) as PoolRow[];
-    const featuredMap: Record<string, string | null> = {};
     const guaranteeCounts: Record<string, number> = {};
     for (const p of poolsForType) {
-      featuredMap[p.id] = p.featured;
       guaranteeCounts[p.id] = 0;
     }
 
@@ -317,7 +315,6 @@ export async function recalculateAllPity(): Promise<void> {
       const isFree = pull.is_free === 1;
       const rarity = pull.rarity;
       const poolId = pull.pool_id;
-      const charId = pull.char_id;
 
       if (isFree) {
         charUpdates.push({ seq_id: pull.seq_id, pity: null });
@@ -340,9 +337,6 @@ export async function recalculateAllPity(): Promise<void> {
       }
       if (rarity === 5) pity5 = 0;
 
-      if (featuredMap[poolId] && charId === featuredMap[poolId]) {
-        guaranteeCounts[poolId] = 0;
-      }
     }
 
     poolTypeUpdates.push({ id: poolType, pity_6: pity6, pity_5: pity5 });
@@ -362,9 +356,6 @@ export async function recalculateAllPity(): Promise<void> {
   for (const ptRow of weaponPoolTypes) {
     const poolType = ptRow.id;
     const poolId = poolType; // For weapons, they are identical
-    const poolData = await db!.prepare('SELECT featured FROM pools WHERE id = ?').get(poolId) as PoolRow | undefined;
-    const featured = poolData?.featured ?? null;
-
     let pity6 = 0;
     let pity5 = 0;
     let guarantee = 0;
@@ -378,7 +369,6 @@ export async function recalculateAllPity(): Promise<void> {
 
     for (const pull of pulls) {
       const rarity = pull.rarity;
-      const weaponId = pull.weapon_id;
 
       pity6++;
       pity5++;
@@ -395,7 +385,6 @@ export async function recalculateAllPity(): Promise<void> {
         pity5 = 0;
       }
       if (rarity === 5) pity5 = 0;
-      if (featured && weaponId === featured) guarantee = 0;
     }
 
     poolTypeUpdates.push({ id: poolType, pity_6: pity6, pity_5: pity5 });
