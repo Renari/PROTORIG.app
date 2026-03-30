@@ -116,7 +116,7 @@
   // p = times the featured was obtained, n = total non-free pulls on this banner.
   $: guarantee = (() => {
     if (currentBanner.poolType !== CHARACTER_GACHA_POOL_TYPES.SPECIAL && !isWeaponView) {
-      return { remaining: 0, limit: CHARACTER_GUARANTEE_LIMIT };
+      return 0;
     }
     const firstLimit = isWeaponView ? WEAPON_GUARANTEE_LIMIT : CHARACTER_GUARANTEE_LIMIT;
     const dupLimit = isWeaponView ? WEAPON_DUPLICATE_GUARANTEE_LIMIT : DUPLICATE_GUARANTEE_LIMIT;
@@ -125,9 +125,9 @@
     const p = filteredByBanner.filter(i => ('charId' in i ? i.charId : i.weaponId) === currentBanner.featured).length;
 
     if (p < 1) {
-      return { remaining: firstLimit - n, limit: firstLimit };
+      return firstLimit - n;
     }
-    return { remaining: dupLimit - (n % dupLimit), limit: dupLimit };
+    return dupLimit - (n % dupLimit);
   })();
 
   // Retrieve global DB-computed tracking values
@@ -301,7 +301,7 @@
               <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Guarantee</p>
               <p class="font-bold text-[#ef4444] items-baseline justify-center gap-0.5 {bannerImageUrl ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">
                 {#if currentBanner.featured}
-                  {guarantee.remaining}
+                  {guarantee}
                 {:else}
                   <span class="text-zinc-400">N/A</span>
                 {/if}
