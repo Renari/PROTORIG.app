@@ -111,9 +111,15 @@
   $: sixStarCount = filteredByBanner.filter(i => i.rarity === 6).length;
   $: fiveStarCount = filteredByBanner.filter(i => i.rarity === 5).length;
   
+  function isNonFreeFeatured(item: GachaRecordItem, featuredId: string | undefined): boolean {
+    if (!featuredId) return false;
+    if ('isFree' in item && item.isFree) return false;
+    return ('charId' in item ? item.charId : item.weaponId) === featuredId;
+  }
+
   // Guarantee uses the following formula:
   //   f(p, n) = { firstLimit - n  if p < 1,  dupLimit - (n % dupLimit)  if p >= 1 }
-  // p = times the featured was obtained, n = total non-free pulls on this banner.
+  // p = times the featured was obtained (non-free), n = total non-free pulls on this banner.
   $: guarantee = (() => {
     if (currentBanner.poolType !== CHARACTER_GACHA_POOL_TYPES.SPECIAL && !isWeaponView) {
       return 0;
@@ -122,7 +128,7 @@
     const dupLimit = isWeaponView ? WEAPON_DUPLICATE_GUARANTEE_LIMIT : DUPLICATE_GUARANTEE_LIMIT;
 
     const n = pityStats?.guarantees[currentBanner.id] || 0;
-    const p = filteredByBanner.filter(i => ('charId' in i ? i.charId : i.weaponId) === currentBanner.featured).length;
+    const p = filteredByBanner.filter(i => isNonFreeFeatured(i, currentBanner.featured)).length;
 
     if (p < 1) {
       return firstLimit - n;
