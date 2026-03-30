@@ -40,7 +40,7 @@ export const DUPLICATE_GUARANTEE_LIMIT = 240;
 
 export const WEAPON_PITY_LIMIT = 40;
 export const WEAPON_GUARANTEE_LIMIT = 80;
-export const WEAPON_DUPLICATE_GUARANTEE_LIMIT = 100;
+export const WEAPON_DUPLICATE_GUARANTEE_LIMIT = 180;
 
 /**
  * Checks whether an item belongs to a specific banner
