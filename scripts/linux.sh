@@ -3,6 +3,7 @@
 SEARCH_DIRS=(
     "$HOME/.config/faugus-launcher/prefixes"
     "$HOME/.local/share/bottles/bottles"
+    "$HOME/.local/share/elysia/wineprefixes/endfield"
     "$HOME/.local/share/Steam/steamapps/compatdata"
     "$HOME/Games" # lutris/heroic
 )
