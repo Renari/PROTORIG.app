@@ -8,7 +8,12 @@ if (-not (Test-Path $cachePath)) {
 
 Write-Host "Reading $cachePath..."
 
-$stream = [System.IO.File]::Open($cachePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+$stream = [System.IO.File]::Open(
+    $cachePath,
+    [System.IO.FileMode]::Open,
+    [System.IO.FileAccess]::Read,
+    [System.IO.FileShare]::ReadWrite -bor [System.IO.FileShare]::Delete
+)
 try {
     $bytes = New-Object byte[] $stream.Length
     [void]$stream.Read($bytes, 0, $bytes.Length)
