@@ -40,7 +40,7 @@ export async function initDb(): Promise<void> {
   // DELETE mode removes the journal after each transaction, sidestepping this.
   // Also checkpoint any existing WAL from prior sessions before switching.
   await db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
-  await db.exec('PRAGMA journal_mode=DELETE');
+  await db.exec("PRAGMA journal_mode='delete'");
 
   // Create tables
   await db.exec(`
