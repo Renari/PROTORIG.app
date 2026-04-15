@@ -33,18 +33,6 @@ export async function initDb(): Promise<void> {
 
   db = await connect('protorig.db');
 
-  // Checkpoint any existing WAL from prior sessions to prevent corruption.
-  // WAL files can end up inconsistent when the OPFS access handle is released
-  // and re-acquired between open/close cycles, causing:
-  //   "short read on WAL frame ... expected 4096 bytes, got 4294967295"
-  // TRUNCATE checkpoint merges WAL into the main DB and resets it to zero length.
-  try {
-    await db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
-  } catch (_) {
-    // Best-effort; may fail if WAL is already corrupt, in which case
-    // we proceed and let SQLite recover what it can.
-  }
-
   // Create tables
   await db.exec(`
     CREATE TABLE IF NOT EXISTS pool_type (
@@ -135,13 +123,6 @@ export async function initDb(): Promise<void> {
  */
 export async function closeDb(): Promise<void> {
   if (db) {
-    try {
-      // Flush any pending WAL data before releasing the OPFS access handle.
-      // This prevents "short read on WAL frame" errors on the next open.
-      await db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
-    } catch (_) {
-      // Best-effort; may fail if already in DELETE mode or db is broken
-    }
     try {
       db.close();
     } catch (err) {
