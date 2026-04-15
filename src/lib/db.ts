@@ -33,14 +33,17 @@ export async function initDb(): Promise<void> {
 
   db = await connect('protorig.db');
 
-  // Use DELETE journal mode instead of WAL to avoid OPFS WAL corruption.
-  // WAL files can end up in an inconsistent state when the OPFS access handle
-  // is released and re-acquired between open/close cycles, causing:
+  // Checkpoint any existing WAL from prior sessions to prevent corruption.
+  // WAL files can end up inconsistent when the OPFS access handle is released
+  // and re-acquired between open/close cycles, causing:
   //   "short read on WAL frame ... expected 4096 bytes, got 4294967295"
-  // DELETE mode removes the journal after each transaction, sidestepping this.
-  // Also checkpoint any existing WAL from prior sessions before switching.
-  await db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
-  await db.exec("PRAGMA journal_mode='delete'");
+  // TRUNCATE checkpoint merges WAL into the main DB and resets it to zero length.
+  try {
+    await db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+  } catch (_) {
+    // Best-effort; may fail if WAL is already corrupt, in which case
+    // we proceed and let SQLite recover what it can.
+  }
 
   // Create tables
   await db.exec(`
