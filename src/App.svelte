@@ -30,6 +30,10 @@
   let fetchingStatus = '';
   let dbLockedError = false;
 
+  // Serialize all DB open/close cycles so they never overlap.
+  // Each operation chains off this promise to avoid OPFS WAL corruption.
+  let dbOperation: Promise<void> = Promise.resolve();
+
   const importTabs = [
     { id: 'windows' as const, label: 'Windows', icon: 'ph:windows-logo-bold' },
     { id: 'linux' as const, label: 'Linux', icon: 'ph:linux-logo-bold' },
@@ -43,7 +47,7 @@
   $: hasData = hasCharacters || hasWeapons;
 
   onMount(() => {
-    initDb()
+    dbOperation = initDb()
       .then(async () => {
         await migrateFromLocalStorage();
         fetchedCharacters = await getAllCharacters();
@@ -71,7 +75,8 @@
   });
 
   function clearStorage() {
-    initDb()
+    dbOperation = dbOperation
+      .then(() => initDb())
       .then(async () => {
         await clearAllData();
         fetchedCharacters = [];
@@ -193,7 +198,8 @@
     errorMsg = '';
     fetchingStatus = 'Initializing secure WebAssembly proxy...';
 
-    initDb()
+    dbOperation = dbOperation
+      .then(() => initDb())
       .then(async () => {
         const maxCharSeqId = await getMaxCharacterSeqId();
         return fetchAllCharacters(currentToken, serverId, lang, (pool, count) => {
