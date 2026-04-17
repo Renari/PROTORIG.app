@@ -8,7 +8,7 @@ const STORAGE_KEY = 'protorig_app_pulls';
  * Reads the existing `protorig_app_pulls` key, inserts records into the DB,
  * then removes the localStorage entry.
  *
- * Safe to call multiple times — it's a no-op if the key doesn't exist.
+ * Safe to call multiple times, it's a no-op if the key doesn't exist.
  */
 export async function migrateFromLocalStorage(): Promise<void> {
   const cached = localStorage.getItem(STORAGE_KEY);
@@ -47,11 +47,11 @@ export async function migrateFromLocalStorage(): Promise<void> {
     
     await recalculateAllPity();
 
-    // Migration successful — remove the localStorage entry
+    // Migration successful, remove the localStorage entry
     localStorage.removeItem(STORAGE_KEY);
     console.log(`[db-migration] Migrated ${characters.length} characters and ${weapons.length} weapons from localStorage to SQLite.`);
   } catch (err) {
     console.error('[db-migration] Failed to migrate from localStorage:', err);
-    // Don't remove the key if migration failed — user can retry
+    // Don't remove the key if migration failed
   }
 }

@@ -1,5 +1,17 @@
 [
   {
+    "id": "special_1_2_1",
+    "poolType": "E_CharacterGachaPoolType_Special",
+    "poolName": "Thunder of Renewal",
+    "featured": "chr_0030_zhuangfy"
+  },
+  {
+    "id": "weponbox_1_2_1",
+    "poolType": "weapon",
+    "poolName": "Drifting Raft Issue",
+    "featured": "wpn_funnel_0015"
+  },
+  {
     "id": "special_1_1_2",
     "poolType": "E_CharacterGachaPoolType_Special",
     "poolName": "Wolf Pearl",
