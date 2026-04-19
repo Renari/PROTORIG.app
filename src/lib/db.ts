@@ -1,40 +1,87 @@
-import { connect, type Database } from '@tursodatabase/database-wasm/bundle';
 import type { EndfieldGachaCharacter, EndfieldGachaWeapon, EndfieldGachaWeaponPool } from './api';
 import { CHARACTER_GACHA_POOL_TYPES, KNOWN_BANNERS } from './banners';
+import {
+  allSql,
+  cleanupSqliteWorkerIfIdle,
+  closeSqliteConnection,
+  execSql,
+  getOpenSqliteConnection,
+  getSql,
+  openSqliteConnection,
+  runTransactionBatch,
+  type SqliteBatchStatement,
+  type SqliteConnectionInfo,
+} from './sqlite/sqlite-adapter';
+import { normalizeSqliteError } from './sqlite/sqlite-errors';
+import {
+  buildPityMutationPlan,
+  mapCharacterPullRow,
+  mapWeaponPullRow,
+  type CharacterPityRow,
+  type CharacterPullRow,
+  type MaxIdRow,
+  type PoolRow,
+  type PoolTypeRow,
+  type WeaponPityRow,
+  type WeaponPullRow,
+} from './db-model';
 
-// Row types for SQLite query results (Turso types all rows as `any`)
-interface MaxIdRow { max_id: number | null }
-interface CharacterPullRow {
-  seq_id: number; pool_id: string; rarity: number; char_id: string;
-  char_name: string; is_free: number; is_new: number; gacha_ts: number;
-  pity: number | null; pool_name: string;
+const REQUIRED_SCHEMA_OBJECTS = [
+  'pool_type',
+  'pools',
+  'characters',
+  'weapons',
+  'character_pulls',
+  'weapon_pulls',
+] as const;
+
+let dbReady = false;
+
+export type Database = SqliteConnectionInfo;
+
+function ensureDbReady(): void {
+  if (!dbReady) {
+    throw new Error('Database not initialized. Call initDb() first.');
+  }
 }
-interface WeaponPullRow {
-  seq_id: number; pool_id: string; rarity: number; weapon_id: string;
-  weapon_name: string; weapon_type: string; is_new: number; gacha_ts: number;
-  pity: number | null; pool_name: string;
+
+function normalizeInitError(error: unknown): Error {
+  const normalized = normalizeSqliteError(error);
+  if (
+    /\bSQLITE_(?:CORRUPT|NOTADB)\b/i.test(normalized.message) ||
+    /database disk image is malformed/i.test(normalized.message) ||
+    /not a database/i.test(normalized.message) ||
+    /integrity check failed/i.test(normalized.message)
+  ) {
+    return new Error(
+      `The local OPFS database is unreadable or corrupt. Clear this site's browser storage to recover. Original error: ${normalized.message}`,
+      { cause: normalized }
+    );
+  }
+
+  return normalized;
 }
-interface PoolRow { id: string; featured: string | null; guarantee: number }
-interface PoolTypeRow { id: string; pity_6: number; pity_5: number }
-interface CharacterPityRow {
-  seq_id: number; pool_id: string; rarity: number; char_id: string;
-  is_free: number; gacha_ts: number;
+
+async function verifyDatabaseIntegrity(): Promise<void> {
+  const row = await getSql<{ quick_check: string }>('PRAGMA quick_check(1);');
+  if (!row || row.quick_check !== 'ok') {
+    throw new Error(`Database integrity check failed: ${row?.quick_check ?? 'unknown result'}`);
+  }
 }
-interface WeaponPityRow { seq_id: number; rarity: number; weapon_id: string }
 
-let db: Database | null = null;
+async function getExistingSchemaObjects(): Promise<Set<string>> {
+  const rows = await allSql<{ name: string }>(`
+    SELECT name
+    FROM sqlite_master
+    WHERE name IN (${REQUIRED_SCHEMA_OBJECTS.map((name) => `'${name}'`).join(', ')})
+    ORDER BY name ASC
+  `);
 
-/**
- * Initialize the database. Creates/opens the OPFS-persisted SQLite database,
- * creates tables if they don't exist, and seeds static lookup data.
- */
-export async function initDb(): Promise<void> {
-  if (db) return;
+  return new Set(rows.map((row) => row.name));
+}
 
-  db = await connect('protorig.db');
-
-  // Create tables
-  await db.exec(`
+async function ensureSchema(): Promise<void> {
+  await execSql(`
     CREATE TABLE IF NOT EXISTS pool_type (
       id TEXT PRIMARY KEY,
       pity_6 INTEGER NOT NULL,
@@ -75,194 +122,284 @@ export async function initDb(): Promise<void> {
       pity INTEGER,
       FOREIGN KEY (pool_id) REFERENCES pools(id)
     );
-  `);
 
-  // Create/recreate views for convenient querying using snake_case
-  await db.exec(`DROP VIEW IF EXISTS character_pulls`);
-  await db.exec(`
+    DROP VIEW IF EXISTS character_pulls;
     CREATE VIEW character_pulls AS
     SELECT c.seq_id, c.pool_id, c.rarity, c.char_id, c.char_name, c.is_free, c.is_new, c.gacha_ts, c.pity,
            COALESCE(p.pool_name, c.pool_id) AS pool_name
     FROM characters c
-    LEFT JOIN pools p ON c.pool_id = p.id
-  `);
+    LEFT JOIN pools p ON c.pool_id = p.id;
 
-  await db.exec(`DROP VIEW IF EXISTS weapon_pulls`);
-  await db.exec(`
+    DROP VIEW IF EXISTS weapon_pulls;
     CREATE VIEW weapon_pulls AS
     SELECT w.seq_id, w.pool_id, w.rarity, w.weapon_id, w.weapon_name, w.weapon_type, w.is_new, w.gacha_ts, w.pity,
            COALESCE(p.pool_name, w.pool_id) AS pool_name
     FROM weapons w
-    LEFT JOIN pools p ON w.pool_id = p.id
+    LEFT JOIN pools p ON w.pool_id = p.id;
   `);
+}
 
-  // Seed pool_type (idempotent via INSERT OR IGNORE)
-  const seedPoolType = db.prepare(
-    'INSERT OR IGNORE INTO pool_type (id, pity_6, pity_5) VALUES (?, ?, ?)'
-  );
-  await seedPoolType.run(CHARACTER_GACHA_POOL_TYPES.SPECIAL, 0, 0);
-  await seedPoolType.run(CHARACTER_GACHA_POOL_TYPES.STANDARD, 0, 0);
-  await seedPoolType.run(CHARACTER_GACHA_POOL_TYPES.BEGINNER, 0, 0);
+async function verifySchemaObjects(): Promise<void> {
+  const found = await getExistingSchemaObjects();
+  const missing = REQUIRED_SCHEMA_OBJECTS.filter((name) => !found.has(name));
+  if (missing.length > 0) {
+    throw new Error(`Database schema sanity check failed. Missing objects: ${missing.join(', ')}`);
+  }
+}
 
-  // Seed pools dynamically from JSON config (idempotent via INSERT OR IGNORE)
-  const seedPool = db.prepare(
-    'INSERT OR IGNORE INTO pools (id, type, pool_name, featured, guarantee) VALUES (?, ?, ?, ?, ?)'
-  );
+async function seedStaticData(): Promise<void> {
+  const statements: SqliteBatchStatement[] = [
+    {
+      sql: 'INSERT OR IGNORE INTO pool_type (id, pity_6, pity_5) VALUES (:id, :pity6, :pity5)',
+      bind: { id: CHARACTER_GACHA_POOL_TYPES.SPECIAL, pity6: 0, pity5: 0 },
+    },
+    {
+      sql: 'INSERT OR IGNORE INTO pool_type (id, pity_6, pity_5) VALUES (:id, :pity6, :pity5)',
+      bind: { id: CHARACTER_GACHA_POOL_TYPES.STANDARD, pity6: 0, pity5: 0 },
+    },
+    {
+      sql: 'INSERT OR IGNORE INTO pool_type (id, pity_6, pity_5) VALUES (:id, :pity6, :pity5)',
+      bind: { id: CHARACTER_GACHA_POOL_TYPES.BEGINNER, pity6: 0, pity5: 0 },
+    },
+  ];
+
   for (const banner of KNOWN_BANNERS) {
-    if (banner.poolType === "weapon") {
-      await seedPoolType.run(banner.id, 0, 0);
-      await seedPool.run(banner.id, banner.id, banner.poolName, banner.featured, 0);
+    if (banner.poolType === 'weapon') {
+      statements.push({
+        sql: 'INSERT OR IGNORE INTO pool_type (id, pity_6, pity_5) VALUES (:id, :pity6, :pity5)',
+        bind: { id: banner.id, pity6: 0, pity5: 0 },
+      });
+      statements.push({
+        sql: `
+          INSERT OR IGNORE INTO pools (id, type, pool_name, featured, guarantee)
+          VALUES (:id, :type, :poolName, :featured, :guarantee)
+        `,
+        bind: {
+          id: banner.id,
+          type: banner.id,
+          poolName: banner.poolName,
+          featured: banner.featured ?? null,
+          guarantee: 0,
+        },
+      });
     } else {
-      await seedPool.run(banner.id, banner.poolType, banner.poolName, banner.featured || null, 0);
+      statements.push({
+        sql: `
+          INSERT OR IGNORE INTO pools (id, type, pool_name, featured, guarantee)
+          VALUES (:id, :type, :poolName, :featured, :guarantee)
+        `,
+        bind: {
+          id: banner.id,
+          type: banner.poolType,
+          poolName: banner.poolName,
+          featured: banner.featured ?? null,
+          guarantee: 0,
+        },
+      });
     }
   }
+
+  await runTransactionBatch(statements);
+}
+
+/**
+ * Initialize the database. Creates/opens the OPFS-persisted SQLite database,
+ * creates tables if they don't exist, and seeds static lookup data.
+ */
+export async function initDb(): Promise<void> {
+  if (dbReady && getOpenSqliteConnection()) {
+    return;
+  }
+
+  try {
+    await openSqliteConnection();
+    const existingObjects = await getExistingSchemaObjects();
+    const missingObjects = REQUIRED_SCHEMA_OBJECTS.filter((name) => !existingObjects.has(name));
+
+    if (existingObjects.size === 0 || missingObjects.length > 0) {
+      await ensureSchema();
+      await seedStaticData();
+      await verifySchemaObjects();
+    }
+
+    await verifyDatabaseIntegrity();
+    dbReady = true;
+  } catch (error) {
+    dbReady = false;
+    throw normalizeInitError(error);
+  }
+}
+
+export async function cleanupDbWorkerIfIdle(): Promise<boolean> {
+  return cleanupSqliteWorkerIfIdle();
 }
 
 /**
  * Close the database and instantly surrender OPFS access handles.
  */
 export async function closeDb(): Promise<void> {
-  if (db) {
-    try {
-      db.close();
-    } catch (err) {
-      // Ignored
-    }
-    db = null;
-  }
+  dbReady = false;
+  await closeSqliteConnection();
 }
 
 /**
  * Get the database instance. Throws if not initialized.
  */
 export function getDb(): Database {
-  if (!db) throw new Error('Database not initialized. Call initDb() first.');
-  return db;
+  ensureDbReady();
+  const connection = getOpenSqliteConnection();
+  if (!connection) {
+    throw new Error('Database not initialized. Call initDb() first.');
+  }
+
+  return connection;
 }
 
 /**
  * Insert character gacha records.
  */
 export async function insertCharacters(chars: EndfieldGachaCharacter[]): Promise<void> {
-  const insert = db!.prepare(`
-    INSERT OR REPLACE INTO characters (seq_id, pool_id, rarity, char_id, char_name, is_free, is_new, gacha_ts, pity)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+  ensureDbReady();
 
-  const tx = db!.transaction(async (items: EndfieldGachaCharacter[]) => {
-    for (const c of items) {
-      await insert.run(
-        Number(c.seqId),
-        c.poolId,
-        c.rarity,
-        c.charId,
-        c.charName,
-        c.isFree ? 1 : 0,
-        c.isNew ? 1 : 0,
-        Number(c.gachaTs),
-        null
-      );
-    }
-  });
-
-  await tx(chars);
+  await runTransactionBatch(chars.map((character) => ({
+    sql: `
+      INSERT OR REPLACE INTO characters (
+        seq_id,
+        pool_id,
+        rarity,
+        char_id,
+        char_name,
+        is_free,
+        is_new,
+        gacha_ts,
+        pity
+      ) VALUES (
+        :seqId,
+        :poolId,
+        :rarity,
+        :charId,
+        :charName,
+        :isFree,
+        :isNew,
+        :gachaTs,
+        :pity
+      )
+    `,
+    bind: {
+      seqId: Number(character.seqId),
+      poolId: character.poolId,
+      rarity: character.rarity,
+      charId: character.charId,
+      charName: character.charName,
+      isFree: character.isFree ? 1 : 0,
+      isNew: character.isNew ? 1 : 0,
+      gachaTs: Number(character.gachaTs),
+      pity: null,
+    },
+  })));
 }
 
 /**
  * Insert weapon pool metadata into the pools table.
  */
 export async function insertWeaponPools(pools: EndfieldGachaWeaponPool[]): Promise<void> {
-  const insertPoolType = db!.prepare(
-    'INSERT OR IGNORE INTO pool_type (id, pity_6, pity_5) VALUES (?, ?, ?)'
-  );
-  const insertPool = db!.prepare(
-    'INSERT OR IGNORE INTO pools (id, type, pool_name) VALUES (?, ?, ?)'
-  );
-  
+  ensureDbReady();
+
+  const statements: SqliteBatchStatement[] = [];
   for (const pool of pools) {
-    // Weapons get a bespoke pool_type entry per-pool for independent pity tracking
-    await insertPoolType.run(pool.poolId, 0, 0);
-    await insertPool.run(pool.poolId, pool.poolId, pool.poolName);
+    statements.push({
+      sql: 'INSERT OR IGNORE INTO pool_type (id, pity_6, pity_5) VALUES (:id, :pity6, :pity5)',
+      bind: {
+        id: pool.poolId,
+        pity6: 0,
+        pity5: 0,
+      },
+    });
+    statements.push({
+      sql: 'INSERT OR IGNORE INTO pools (id, type, pool_name) VALUES (:id, :type, :poolName)',
+      bind: {
+        id: pool.poolId,
+        type: pool.poolId,
+        poolName: pool.poolName,
+      },
+    });
   }
+
+  await runTransactionBatch(statements);
 }
 
 /**
  * Insert weapon gacha records.
  */
 export async function insertWeapons(weapons: EndfieldGachaWeapon[]): Promise<void> {
-  const insert = db!.prepare(`
-    INSERT OR REPLACE INTO weapons (seq_id, pool_id, rarity, weapon_id, weapon_name, weapon_type, is_new, gacha_ts, pity)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+  ensureDbReady();
 
-  const tx = db!.transaction(async (items: EndfieldGachaWeapon[]) => {
-    for (const w of items) {
-      await insert.run(
-        Number(w.seqId),
-        w.poolId,
-        w.rarity,
-        w.weaponId,
-        w.weaponName,
-        w.weaponType || '',
-        w.isNew ? 1 : 0,
-        Number(w.gachaTs),
-        null
-      );
-    }
-  });
-
-  await tx(weapons);
+  await runTransactionBatch(weapons.map((weapon) => ({
+    sql: `
+      INSERT OR REPLACE INTO weapons (
+        seq_id,
+        pool_id,
+        rarity,
+        weapon_id,
+        weapon_name,
+        weapon_type,
+        is_new,
+        gacha_ts,
+        pity
+      ) VALUES (
+        :seqId,
+        :poolId,
+        :rarity,
+        :weaponId,
+        :weaponName,
+        :weaponType,
+        :isNew,
+        :gachaTs,
+        :pity
+      )
+    `,
+    bind: {
+      seqId: Number(weapon.seqId),
+      poolId: weapon.poolId,
+      rarity: weapon.rarity,
+      weaponId: weapon.weaponId,
+      weaponName: weapon.weaponName,
+      weaponType: weapon.weaponType || '',
+      isNew: weapon.isNew ? 1 : 0,
+      gachaTs: Number(weapon.gachaTs),
+      pity: null,
+    },
+  })));
 }
 
 /**
  * Get all character records sorted by gacha_ts ascending.
  */
 export async function getAllCharacters(): Promise<EndfieldGachaCharacter[]> {
-  const rows = await db!.prepare(`
+  ensureDbReady();
+  const rows = await allSql<CharacterPullRow>(`
     SELECT * FROM character_pulls ORDER BY gacha_ts ASC
-  `).all();
-
-  return (rows as CharacterPullRow[]).map((r) => ({
-    seqId: String(r.seq_id),
-    poolId: r.pool_id,
-    poolName: r.pool_name,
-    rarity: r.rarity,
-    charId: r.char_id,
-    charName: r.char_name,
-    isFree: r.is_free === 1,
-    isNew: r.is_new === 1,
-    gachaTs: String(r.gacha_ts),
-    pity: r.pity,
-  }));
+  `);
+  return rows.map(mapCharacterPullRow);
 }
 
 /**
  * Get all weapon records sorted by gacha_ts ascending.
  */
 export async function getAllWeapons(): Promise<EndfieldGachaWeapon[]> {
-  const rows = await db!.prepare(`
+  ensureDbReady();
+  const rows = await allSql<WeaponPullRow>(`
     SELECT * FROM weapon_pulls ORDER BY gacha_ts ASC
-  `).all();
-
-  return (rows as WeaponPullRow[]).map((r) => ({
-    seqId: String(r.seq_id),
-    poolId: r.pool_id,
-    poolName: r.pool_name,
-    rarity: r.rarity,
-    weaponId: r.weapon_id,
-    weaponName: r.weapon_name,
-    weaponType: r.weapon_type,
-    isNew: r.is_new === 1,
-    gachaTs: String(r.gacha_ts),
-    pity: r.pity,
-  }));
+  `);
+  return rows.map(mapWeaponPullRow);
 }
 
 /**
  * Get the highest seqId currently stored for characters.
  */
 export async function getMaxCharacterSeqId(): Promise<number> {
-  const row = await db!.prepare('SELECT MAX(seq_id) as max_id FROM characters').get() as MaxIdRow | undefined;
+  ensureDbReady();
+  const row = await getSql<MaxIdRow>('SELECT MAX(seq_id) AS max_id FROM characters');
   return Number(row?.max_id ?? 0);
 }
 
@@ -270,7 +407,8 @@ export async function getMaxCharacterSeqId(): Promise<number> {
  * Get the highest seqId currently stored for weapons.
  */
 export async function getMaxWeaponSeqId(): Promise<number> {
-  const row = await db!.prepare('SELECT MAX(seq_id) as max_id FROM weapons').get() as MaxIdRow | undefined;
+  ensureDbReady();
+  const row = await getSql<MaxIdRow>('SELECT MAX(seq_id) AS max_id FROM weapons');
   return Number(row?.max_id ?? 0);
 }
 
@@ -278,7 +416,8 @@ export async function getMaxWeaponSeqId(): Promise<number> {
  * Delete all character and weapon records (but keep pool_type/pools seed data).
  */
 export async function clearAllData(): Promise<void> {
-  await db!.exec('DELETE FROM characters; DELETE FROM weapons;');
+  ensureDbReady();
+  await execSql('DELETE FROM characters; DELETE FROM weapons;');
 }
 
 /**
@@ -286,133 +425,110 @@ export async function clearAllData(): Promise<void> {
  * running pity onto every pull, saving the final results into pool_type and pools.
  */
 export async function recalculateAllPity(): Promise<void> {
-  const charUpdates: { seq_id: number; pity: number | null }[] = [];
-  const weaponUpdates: { seq_id: number; pity: number | null }[] = [];
-  const poolTypeUpdates: { id: string; pity_6: number; pity_5: number }[] = [];
-  const poolUpdates: { id: string; guarantee: number }[] = [];
+  ensureDbReady();
 
-  // --- 1. Calculate Character Pity ---
-  // Characters share pity across their pool_type (e.g. SPECIAL, STANDARD)
+  const characterPoolsByType: Record<string, PoolRow[]> = {};
+  const characterPullsByType: Record<string, CharacterPityRow[]> = {};
+
   for (const poolType of Object.values(CHARACTER_GACHA_POOL_TYPES)) {
-    const poolsForType = await db!.prepare('SELECT id, featured FROM pools WHERE type = ?').all(poolType) as PoolRow[];
-    const guaranteeCounts: Record<string, number> = {};
-    for (const p of poolsForType) {
-      guaranteeCounts[p.id] = 0;
-    }
-
-    let pity6 = 0;
-    let pity5 = 0;
-
-    const pulls = await db!.prepare(`
-      SELECT c.seq_id, c.pool_id, c.rarity, c.char_id, c.is_free, c.gacha_ts
-      FROM characters c
-      JOIN pools p ON p.id = c.pool_id
-      WHERE p.type = ?
-      ORDER BY c.seq_id ASC
-    `).all(poolType) as CharacterPityRow[];
-
-    for (const pull of pulls) {
-      const isFree = pull.is_free === 1;
-      const rarity = pull.rarity;
-      const poolId = pull.pool_id;
-
-      if (isFree) {
-        charUpdates.push({ seq_id: pull.seq_id, pity: null });
-        continue;
-      }
-
-      pity6++;
-      pity5++;
-      guaranteeCounts[poolId] = (guaranteeCounts[poolId] || 0) + 1;
-
-      let assignedPity: number | null = null;
-      if (rarity === 6) assignedPity = pity6;
-      else if (rarity === 5) assignedPity = pity5;
-
-      charUpdates.push({ seq_id: pull.seq_id, pity: assignedPity });
-
-      if (rarity === 6) {
-        pity6 = 0;
-        pity5 = 0;
-      }
-      if (rarity === 5) pity5 = 0;
-
-    }
-
-    poolTypeUpdates.push({ id: poolType, pity_6: pity6, pity_5: pity5 });
-    for (const [poolId, guarantee] of Object.entries(guaranteeCounts)) {
-      poolUpdates.push({ id: poolId, guarantee });
-    }
+    characterPoolsByType[poolType] = await allSql<PoolRow>(
+      'SELECT id, featured, guarantee FROM pools WHERE type = :poolType',
+      { ':poolType': poolType }
+    );
+    characterPullsByType[poolType] = await allSql<CharacterPityRow>(
+      `
+        SELECT c.seq_id, c.pool_id, c.rarity, c.char_id, c.is_free, c.gacha_ts
+        FROM characters c
+        JOIN pools p ON p.id = c.pool_id
+        WHERE p.type = :poolType
+        ORDER BY c.seq_id ASC
+      `,
+      { ':poolType': poolType }
+    );
   }
 
-  // --- 2. Calculate Weapon Pity ---
-  // Weapons have 1:1 pool_type and pool_id, so they do not share pity across banners.
-  const weaponTypeQuery = `
-    SELECT id FROM pool_type 
-    WHERE id NOT IN (${Object.values(CHARACTER_GACHA_POOL_TYPES).map(() => '?').join(', ')})
-  `;
-  const weaponPoolTypes = await db!.prepare(weaponTypeQuery).all(...Object.values(CHARACTER_GACHA_POOL_TYPES)) as PoolTypeRow[];
-
-  for (const ptRow of weaponPoolTypes) {
-    const poolType = ptRow.id;
-    const poolId = poolType; // For weapons, they are identical
-    let pity6 = 0;
-    let pity5 = 0;
-    let guarantee = 0;
-
-    const pulls = await db!.prepare(`
-      SELECT w.seq_id, w.rarity, w.weapon_id
-      FROM weapons w
-      WHERE w.pool_id = ?
-      ORDER BY w.seq_id ASC
-    `).all(poolId) as WeaponPityRow[];
-
-    for (const pull of pulls) {
-      const rarity = pull.rarity;
-
-      pity6++;
-      pity5++;
-      guarantee++;
-
-      let assignedPity: number | null = null;
-      if (rarity === 6) assignedPity = pity6;
-      else if (rarity === 5) assignedPity = pity5;
-
-      weaponUpdates.push({ seq_id: pull.seq_id, pity: assignedPity });
-
-      if (rarity === 6) {
-        pity6 = 0;
-        pity5 = 0;
-      }
-      if (rarity === 5) pity5 = 0;
+  const weaponPoolTypes = await allSql<PoolTypeRow>(
+    `
+      SELECT id, pity_6, pity_5
+      FROM pool_type
+      WHERE id NOT IN (:special, :standard, :beginner)
+    `,
+    {
+      ':special': CHARACTER_GACHA_POOL_TYPES.SPECIAL,
+      ':standard': CHARACTER_GACHA_POOL_TYPES.STANDARD,
+      ':beginner': CHARACTER_GACHA_POOL_TYPES.BEGINNER,
     }
+  );
 
-    poolTypeUpdates.push({ id: poolType, pity_6: pity6, pity_5: pity5 });
-    poolUpdates.push({ id: poolId, guarantee });
+  const weaponPullsByPoolType: Record<string, WeaponPityRow[]> = {};
+  for (const poolType of weaponPoolTypes.map((row) => row.id)) {
+    weaponPullsByPoolType[poolType] = await allSql<WeaponPityRow>(
+      `
+        SELECT w.seq_id, w.rarity, w.weapon_id
+        FROM weapons w
+        WHERE w.pool_id = :poolId
+        ORDER BY w.seq_id ASC
+      `,
+      { ':poolId': poolType }
+    );
   }
 
-  // Bulk update inside a transaction for performance
-  const tx = db!.transaction(async () => {
-    // Reset defaults
-    await db!.exec('UPDATE pool_type SET pity_6 = 0, pity_5 = 0');
-    await db!.exec('UPDATE pools SET guarantee = 0');
-    await db!.exec('UPDATE characters SET pity = NULL');
-    await db!.exec('UPDATE weapons SET pity = NULL');
-
-    const updChar = db!.prepare('UPDATE characters SET pity = ? WHERE seq_id = ?');
-    for (const u of charUpdates) await updChar.run(u.pity, u.seq_id);
-
-    const updWeapon = db!.prepare('UPDATE weapons SET pity = ? WHERE seq_id = ?');
-    for (const u of weaponUpdates) await updWeapon.run(u.pity, u.seq_id);
-
-    const updPoolType = db!.prepare('UPDATE pool_type SET pity_6 = ?, pity_5 = ? WHERE id = ?');
-    for (const u of poolTypeUpdates) await updPoolType.run(u.pity_6, u.pity_5, u.id);
-
-    const updPool = db!.prepare('UPDATE pools SET guarantee = ? WHERE id = ?');
-    for (const u of poolUpdates) await updPool.run(u.guarantee, u.id);
+  const plan = buildPityMutationPlan({
+    characterPoolsByType,
+    characterPullsByType,
+    weaponPoolTypeIds: weaponPoolTypes.map((row) => row.id),
+    weaponPullsByPoolType,
   });
 
-  await tx();
+  const statements: SqliteBatchStatement[] = [
+    { sql: 'UPDATE pool_type SET pity_6 = 0, pity_5 = 0' },
+    { sql: 'UPDATE pools SET guarantee = 0' },
+    { sql: 'UPDATE characters SET pity = NULL' },
+    { sql: 'UPDATE weapons SET pity = NULL' },
+  ];
+
+  for (const update of plan.charUpdates) {
+    statements.push({
+      sql: 'UPDATE characters SET pity = :pity WHERE seq_id = :seqId',
+      bind: {
+        pity: update.pity,
+        seqId: update.seq_id,
+      },
+    });
+  }
+
+  for (const update of plan.weaponUpdates) {
+    statements.push({
+      sql: 'UPDATE weapons SET pity = :pity WHERE seq_id = :seqId',
+      bind: {
+        pity: update.pity,
+        seqId: update.seq_id,
+      },
+    });
+  }
+
+  for (const update of plan.poolTypeUpdates) {
+    statements.push({
+      sql: 'UPDATE pool_type SET pity_6 = :pity6, pity_5 = :pity5 WHERE id = :id',
+      bind: {
+        id: update.id,
+        pity6: update.pity_6,
+        pity5: update.pity_5,
+      },
+    });
+  }
+
+  for (const update of plan.poolUpdates) {
+    statements.push({
+      sql: 'UPDATE pools SET guarantee = :guarantee WHERE id = :id',
+      bind: {
+        id: update.id,
+        guarantee: update.guarantee,
+      },
+    });
+  }
+
+  await runTransactionBatch(statements);
 }
 
 export interface PityStats {
@@ -424,19 +540,21 @@ export interface PityStats {
  * Returns the current running totals of pity and guarantee across all pools and pool types.
  */
 export async function getPityStats(): Promise<PityStats> {
-  if (!db) return { poolTypes: {}, guarantees: {} };
+  if (!dbReady) {
+    return { poolTypes: {}, guarantees: {} };
+  }
 
-  const poolTypeRows = await db.prepare('SELECT id, pity_6, pity_5 FROM pool_type').all() as PoolTypeRow[];
-  const poolRows = await db.prepare('SELECT id, guarantee FROM pools').all() as PoolRow[];
+  const poolTypeRows = await allSql<PoolTypeRow>('SELECT id, pity_6, pity_5 FROM pool_type');
+  const poolRows = await allSql<PoolRow>('SELECT id, guarantee FROM pools');
 
   const poolTypes: Record<string, { pity6: number; pity5: number }> = {};
-  for (const r of poolTypeRows) {
-    poolTypes[r.id] = { pity6: r.pity_6, pity5: r.pity_5 };
+  for (const row of poolTypeRows) {
+    poolTypes[row.id] = { pity6: row.pity_6, pity5: row.pity_5 };
   }
 
   const guarantees: Record<string, number> = {};
-  for (const r of poolRows) {
-    guarantees[r.id] = r.guarantee || 0;
+  for (const row of poolRows) {
+    guarantees[row.id] = row.guarantee || 0;
   }
 
   return { poolTypes, guarantees };

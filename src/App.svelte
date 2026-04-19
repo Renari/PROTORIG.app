@@ -5,7 +5,22 @@
   import he from 'he';
   import { fetchAllCharacters, fetchAllWeapons, type EndfieldGachaCharacter, type EndfieldGachaWeapon } from './lib/api';
   import { exportEGF } from './lib/egf';
-  import { initDb, closeDb, getAllCharacters, getAllWeapons, insertCharacters, insertWeapons, insertWeaponPools, clearAllData, recalculateAllPity, getPityStats, getMaxCharacterSeqId, getMaxWeaponSeqId, type PityStats } from './lib/db';
+  import {
+    cleanupDbWorkerIfIdle,
+    initDb,
+    closeDb,
+    getAllCharacters,
+    getAllWeapons,
+    insertCharacters,
+    insertWeapons,
+    insertWeaponPools,
+    clearAllData,
+    recalculateAllPity,
+    getPityStats,
+    getMaxCharacterSeqId,
+    getMaxWeaponSeqId,
+    type PityStats
+  } from './lib/db';
   import { migrateFromLocalStorage } from './lib/db-migration';
   import Sidebar from './Sidebar.svelte';
   import PullHistory from './PullHistory.svelte';
@@ -24,14 +39,13 @@
   let lang = '';
   let isFetching = false;
   let errorMsg = '';
+  let startupErrorMsg = '';
   let fetchedCharacters: EndfieldGachaCharacter[] = [];
   let fetchedWeapons: EndfieldGachaWeapon[] = [];
   let pityStats: PityStats | null = null;
   let fetchingStatus = '';
-  let dbLockedError = false;
 
-  // Serialize all DB open/close cycles so they never overlap.
-  // Each operation chains off this promise to avoid OPFS WAL corruption.
+  // Serialize app operations so DB sessions and imports never overlap within one tab.
   let dbOperation: Promise<void> = Promise.resolve();
 
   const importTabs = [
@@ -46,9 +60,35 @@
   $: hasWeapons = fetchedWeapons && fetchedWeapons.length > 0;
   $: hasData = hasCharacters || hasWeapons;
 
+  function queueOperation<T>(operation: () => Promise<T>): Promise<T> {
+    const scheduled = dbOperation.then(operation);
+    dbOperation = scheduled.then(() => undefined, () => undefined);
+    return scheduled;
+  }
+
+  async function withDbSession<T>(task: () => Promise<T>): Promise<T> {
+    await initDb();
+    try {
+      return await task();
+    } finally {
+      await closeDb();
+    }
+  }
+
+  function scheduleIdleDbCleanup() {
+    void queueOperation(async () => {
+      if (isFetching) {
+        return;
+      }
+
+      await closeDb();
+      await cleanupDbWorkerIfIdle();
+    });
+  }
+
   onMount(() => {
-    dbOperation = initDb()
-      .then(async () => {
+    void queueOperation(async () => {
+      await withDbSession(async () => {
         await migrateFromLocalStorage();
         fetchedCharacters = await getAllCharacters();
         fetchedWeapons = await getAllWeapons();
@@ -56,40 +96,47 @@
         if (fetchedCharacters.length > 0 || fetchedWeapons.length > 0) {
           currentPage = 'all-headhunts';
         }
-      })
-      .catch((err: any) => {
-        console.error('Failed to initialize database:', err);
-        const isLockError = err.name === 'NoModificationAllowedError' 
-          || err.name === 'DOMException'
-          || err.message?.includes('Access Handles cannot be created')
-          || err.message?.includes('No modification allowed') 
-          || err.message?.includes('lock');
-          
-        if (isLockError) {
-          dbLockedError = true;
-        }
-      })
-      .finally(async () => {
-        await closeDb();
       });
+    }).catch((err: any) => {
+      console.error('Failed to initialize database:', err);
+      startupErrorMsg = err.message || 'Failed to initialize the local database.';
+    });
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        scheduleIdleDbCleanup();
+      }
+    };
+    const handlePageHide = () => {
+      scheduleIdleDbCleanup();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+      scheduleIdleDbCleanup();
+    };
   });
 
   function clearStorage() {
-    dbOperation = dbOperation
-      .then(() => initDb())
-      .then(async () => {
+    errorMsg = '';
+    startupErrorMsg = '';
+
+    void queueOperation(async () => {
+      await withDbSession(async () => {
         await clearAllData();
         fetchedCharacters = [];
         fetchedWeapons = [];
         pityStats = await getPityStats();
         currentPage = 'import';
-      })
-      .catch((err: any) => {
-        console.error('Failed to clear storage:', err);
-      })
-      .finally(async () => {
-        await closeDb();
       });
+    }).catch((err: any) => {
+      console.error('Failed to clear storage:', err);
+      errorMsg = err.message || 'Failed to clear the local database.';
+    });
   }
 
   function handleNavigate(page: string) {
@@ -196,46 +243,53 @@
   function startFetching(currentToken: string, serverId: string, lang: string) {
     isFetching = true;
     errorMsg = '';
+    startupErrorMsg = '';
     fetchingStatus = 'Initializing secure WebAssembly proxy...';
 
-    dbOperation = dbOperation
-      .then(() => initDb())
-      .then(async () => {
-        const maxCharSeqId = await getMaxCharacterSeqId();
-        return fetchAllCharacters(currentToken, serverId, lang, (pool, count) => {
+    void queueOperation(async () => {
+      try {
+        const { maxCharSeqId, maxWeaponSeqId } = await withDbSession(async () => ({
+          maxCharSeqId: await getMaxCharacterSeqId(),
+          maxWeaponSeqId: await getMaxWeaponSeqId(),
+        }));
+
+        const chars = await fetchAllCharacters(currentToken, serverId, lang, (pool, count) => {
           fetchingStatus = `Scanning character pool ${pool}... Found ${count} new pulls.`;
         }, maxCharSeqId);
-      })
-      .then(async (chars) => {
-        await insertCharacters(chars);
-        const maxWeaponSeqId = await getMaxWeaponSeqId();
-        return fetchAllWeapons(currentToken, serverId, lang, (count: number) => {
+
+        const weaps = await fetchAllWeapons(currentToken, serverId, lang, (count: number) => {
           fetchingStatus = `Scanning weapon pools... Found ${count} new pulls.`;
         }, maxWeaponSeqId);
-      })
-      .then(async (weaps) => {
-        // Extract unique pools from weapon data for pool metadata
-        const uniquePools = new Map<string, string>();
-        for (const w of weaps) {
-          uniquePools.set(w.poolId, w.poolName);
-        }
-        await insertWeaponPools(Array.from(uniquePools, ([poolId, poolName]) => ({ poolId, poolName })));
-        await insertWeapons(weaps);
-        fetchingStatus = 'Recalculating global pity records...';
-        await recalculateAllPity();
-        pityStats = await getPityStats();
-        fetchedCharacters = await getAllCharacters();
-        fetchedWeapons = await getAllWeapons();
-        currentPage = 'all-headhunts';
-      })
-      .catch((err: any) => {
+
+        await withDbSession(async () => {
+          if (chars.length > 0) {
+            await insertCharacters(chars);
+          }
+
+          if (weaps.length > 0) {
+            const uniquePools = new Map<string, string>();
+            for (const weapon of weaps) {
+              uniquePools.set(weapon.poolId, weapon.poolName);
+            }
+            await insertWeaponPools(Array.from(uniquePools, ([poolId, poolName]) => ({ poolId, poolName })));
+            await insertWeapons(weaps);
+          }
+
+          fetchingStatus = 'Recalculating global pity records...';
+          await recalculateAllPity();
+          pityStats = await getPityStats();
+          fetchedCharacters = await getAllCharacters();
+          fetchedWeapons = await getAllWeapons();
+          currentPage = 'all-headhunts';
+        });
+      } catch (err: any) {
         errorMsg = err.message || 'Failed to fetch the pulls using the provided token.';
-      })
-      .finally(async () => {
-        await closeDb();
+      } finally {
         isFetching = false;
         fetchingStatus = '';
-      });
+        scheduleIdleDbCleanup();
+      }
+    });
   }
 
   function handleExport() {
@@ -247,16 +301,6 @@
     ? currentPage.replace('banner:', '')
     : 'all';
 </script>
-
-{#if dbLockedError}
-  <div class="flex flex-col items-center justify-center h-screen bg-zinc-950 text-white p-6" style="animation: fadeInUp 0.5s ease-out forwards;">
-    <Icon icon="ph:warning-duotone" class="text-6xl text-red-500 mb-6" />
-    <h1 class="text-2xl md:text-3xl font-extrabold mb-4 text-center">Application Already Open</h1>
-    <p class="text-zinc-400 text-center max-w-md leading-relaxed">
-      The local database can only be accessed by one tab at a time. Please close any other tabs running PROTORIG.app and refresh this page.
-    </p>
-  </div>
-{:else}
 <div class="flex h-screen overflow-hidden bg-zinc-950 text-zinc-200">
   <!-- Mobile overlay -->
   {#if sidebarOpen}
@@ -297,6 +341,12 @@
 
     <div class="flex-1 overflow-y-auto">
       <div class="p-6 md:p-8 lg:p-10 max-w-6xl mx-auto relative z-10 w-full">
+      {#if startupErrorMsg}
+        <div class="mb-6 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl flex items-start gap-3">
+          <Icon icon="ph:warning-circle-duotone" class="text-xl text-red-400 flex-shrink-0 mt-0.5" />
+          <p class="text-sm leading-relaxed">{startupErrorMsg}</p>
+        </div>
+      {/if}
       {#if currentPage === 'import'}
         <!-- Import Page -->
         <div style="animation: fadeInUp 0.5s ease-out forwards;">
@@ -606,7 +656,6 @@
     </div>
   </main>
 </div>
-{/if}
 
 <style>
   @keyframes fadeInUp {
