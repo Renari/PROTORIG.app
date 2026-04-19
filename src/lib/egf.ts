@@ -25,7 +25,7 @@ export function exportEGF(characters: EndfieldGachaCharacter[], weapons: Endfiel
       game_id: 'endfield',
       export_timestamp: Math.floor(Date.now() / 1000),
       export_app: 'PROTORIG.app',
-      export_app_version: 'v2.0.0'
+      export_app_version: import.meta.env.APP_VERSION
     },
     characters,
     weapons

@@ -1,7 +1,7 @@
 {
   "name": "protorig.app",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "conc -n 'vite,wisp' -c 'green,blue' 'vite' 'dotenv -- node wisp-server.mjs'",
