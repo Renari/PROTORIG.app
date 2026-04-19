@@ -6,7 +6,7 @@ A Svelte-based tool designed to help you track, filter, and analyze your gacha p
 
 ### Prerequisites
 
-- Node.js (v20 or higher recommended)
+- Node.js (v22 or higher recommended)
 - `npm` or `bun`
 
 ### Development
