@@ -76,4 +76,36 @@ describe('backup storage', () => {
     expect(listBackups()).toHaveLength(0);
     expect(getBackup(record.id)).toBeNull();
   });
+
+  it('drops malformed backups before returning them', () => {
+    localStorage.setItem('protorig_app_backups', JSON.stringify([
+      {
+        id: 'valid-backup',
+        createdAt: '2026-04-19T22:12:50.000Z',
+        reason: 'before-clear',
+        schemaVersion: 1,
+        appVersion: '2.0.0',
+        counts: {
+          characters: 1,
+          weapons: 1,
+          weaponPools: 1,
+        },
+        snapshot: makeSnapshot(5),
+      },
+      {
+        id: 'broken-backup',
+        createdAt: 'not-a-date',
+        reason: 'before-import',
+        snapshot: {
+          characters: [],
+          weapons: [],
+        },
+      },
+    ]));
+
+    const backups = listBackups();
+    expect(backups).toHaveLength(1);
+    expect(backups[0].id).toBe('valid-backup');
+    expect(getBackup('broken-backup')).toBeNull();
+  });
 });
