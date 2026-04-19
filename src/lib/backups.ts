@@ -71,7 +71,7 @@ export function createBackup(
     createdAt: new Date().toISOString(),
     reason,
     schemaVersion: BACKUP_SCHEMA_VERSION,
-    appVersion: 'v2.0.0',
+    appVersion: import.meta.env.APP_VERSION,
     counts: {
       characters: snapshot.characters.length,
       weapons: snapshot.weapons.length,
