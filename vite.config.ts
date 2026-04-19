@@ -17,8 +17,14 @@ export default defineConfig({
       'Cross-Origin-Embedder-Policy': 'credentialless',
     },
   },
+  preview: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'credentialless',
+    },
+  },
   optimizeDeps: {
-    exclude: ['@tursodatabase/database-wasm'],
+    exclude: ['@sqlite.org/sqlite-wasm'],
   },
   test: {
     environment: 'jsdom',
