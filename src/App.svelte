@@ -316,10 +316,10 @@
     settingsNotice = '';
     settingsError = '';
     fetchingStatus = 'Initializing secure WebAssembly proxy...';
-    createPreflightBackup('before-import');
 
     void queueOperation(async () => {
       try {
+        createPreflightBackup('before-import');
         const { maxCharSeqId, maxWeaponSeqId } = await withDbSession(async () => ({
           maxCharSeqId: await getMaxCharacterSeqId(),
           maxWeaponSeqId: await getMaxWeaponSeqId(),
