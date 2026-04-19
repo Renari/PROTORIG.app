@@ -3,7 +3,8 @@
   import Icon from '@iconify/svelte';
   // @ts-ignore
   import he from 'he';
-  import { fetchAllCharacters, fetchAllWeapons, type EndfieldGachaCharacter, type EndfieldGachaWeapon } from './lib/api';
+  import { fetchAllCharacters, fetchAllWeapons, type EndfieldGachaCharacter, type EndfieldGachaWeapon, type EndfieldGachaWeaponPool } from './lib/api';
+  import { createBackup, deleteBackup, getBackup, listBackups, type BackupReason, type BackupRecord, type BackupSnapshot } from './lib/backups';
   import { exportEGF } from './lib/egf';
   import {
     cleanupDbWorkerIfIdle,
@@ -24,6 +25,7 @@
   import { migrateFromLocalStorage } from './lib/db-migration';
   import Sidebar from './Sidebar.svelte';
   import PullHistory from './PullHistory.svelte';
+  import SettingsPage from './SettingsPage.svelte';
 
   const LINUX_SH = 'https://raw.githubusercontent.com/Renari/PROTORIG.app/9609e10732dec3a765938e5c24576032107cc3db/scripts/linux.sh'
   const WINDOWS_PS1 = 'https://raw.githubusercontent.com/Renari/PROTORIG.app/d15d6945eee7456b37b0ef6030f1d936983ed390/scripts/windows.ps1'
@@ -44,6 +46,10 @@
   let fetchedWeapons: EndfieldGachaWeapon[] = [];
   let pityStats: PityStats | null = null;
   let fetchingStatus = '';
+  let backups: BackupRecord[] = [];
+  let settingsNotice = '';
+  let settingsError = '';
+  let settingsBusyLabel = '';
 
   // Serialize app operations so DB sessions and imports never overlap within one tab.
   let dbOperation: Promise<void> = Promise.resolve();
@@ -86,13 +92,64 @@
     });
   }
 
+  function refreshBackups() {
+    backups = listBackups();
+  }
+
+  function getCurrentWeaponPools(): EndfieldGachaWeaponPool[] {
+    const uniquePools = new Map<string, string>();
+    for (const weapon of fetchedWeapons) {
+      uniquePools.set(weapon.poolId, weapon.poolName);
+    }
+
+    return Array.from(uniquePools, ([poolId, poolName]) => ({ poolId, poolName }))
+      .sort((a, b) => a.poolName.localeCompare(b.poolName));
+  }
+
+  function createCurrentSnapshot(): BackupSnapshot {
+    return {
+      characters: fetchedCharacters,
+      weapons: fetchedWeapons,
+      weaponPools: getCurrentWeaponPools(),
+    };
+  }
+
+  async function loadAppStateFromOpenDb() {
+    fetchedCharacters = await getAllCharacters();
+    fetchedWeapons = await getAllWeapons();
+    pityStats = await getPityStats();
+  }
+
+  async function restoreSnapshotToOpenDb(snapshot: BackupSnapshot) {
+    await clearAllData();
+    if (snapshot.weaponPools.length > 0) {
+      await insertWeaponPools(snapshot.weaponPools);
+    }
+    if (snapshot.characters.length > 0) {
+      await insertCharacters(snapshot.characters);
+    }
+    if (snapshot.weapons.length > 0) {
+      await insertWeapons(snapshot.weapons);
+    }
+    await recalculateAllPity();
+  }
+
+  function createPreflightBackup(reason: BackupReason) {
+    if (!hasData) {
+      return;
+    }
+
+    createBackup(createCurrentSnapshot(), reason);
+    refreshBackups();
+  }
+
   onMount(() => {
+    refreshBackups();
+
     void queueOperation(async () => {
       await withDbSession(async () => {
         await migrateFromLocalStorage();
-        fetchedCharacters = await getAllCharacters();
-        fetchedWeapons = await getAllWeapons();
-        pityStats = await getPityStats();
+        await loadAppStateFromOpenDb();
         if (fetchedCharacters.length > 0 || fetchedWeapons.length > 0) {
           currentPage = 'all-headhunts';
         }
@@ -122,29 +179,41 @@
   });
 
   function clearStorage() {
+    settingsNotice = '';
+    settingsError = '';
     errorMsg = '';
     startupErrorMsg = '';
 
+    if (!hasData) {
+      return;
+    }
+    if (!window.confirm('Clear all local data? A backup will be created first.')) {
+      return;
+    }
+
+    settingsBusyLabel = 'Clearing local data...';
+
     void queueOperation(async () => {
       await withDbSession(async () => {
+        createPreflightBackup('before-clear');
         await clearAllData();
         fetchedCharacters = [];
         fetchedWeapons = [];
         pityStats = await getPityStats();
         currentPage = 'import';
+        settingsNotice = 'Local data cleared. A backup was created before the reset.';
+        refreshBackups();
       });
     }).catch((err: any) => {
       console.error('Failed to clear storage:', err);
-      errorMsg = err.message || 'Failed to clear the local database.';
+      settingsError = err.message || 'Failed to clear local data.';
+    }).finally(() => {
+      settingsBusyLabel = '';
     });
   }
 
   function handleNavigate(page: string) {
     currentPage = page;
-  }
-
-  function goToImport() {
-    currentPage = 'import';
   }
 
   function findNewestTokenUrl(input: string): string | null {
@@ -244,7 +313,10 @@
     isFetching = true;
     errorMsg = '';
     startupErrorMsg = '';
+    settingsNotice = '';
+    settingsError = '';
     fetchingStatus = 'Initializing secure WebAssembly proxy...';
+    createPreflightBackup('before-import');
 
     void queueOperation(async () => {
       try {
@@ -277,9 +349,7 @@
 
           fetchingStatus = 'Recalculating global pity records...';
           await recalculateAllPity();
-          pityStats = await getPityStats();
-          fetchedCharacters = await getAllCharacters();
-          fetchedWeapons = await getAllWeapons();
+          await loadAppStateFromOpenDb();
           currentPage = 'all-headhunts';
         });
       } catch (err: any) {
@@ -294,6 +364,51 @@
 
   function handleExport() {
     exportEGF(fetchedCharacters, fetchedWeapons);
+  }
+
+  function handleDeleteBackup(id: string) {
+    settingsNotice = '';
+    settingsError = '';
+
+    if (!window.confirm('Delete this backup? This cannot be undone.')) {
+      return;
+    }
+
+    deleteBackup(id);
+    refreshBackups();
+    settingsNotice = 'Backup deleted.';
+  }
+
+  function handleRestoreBackup(id: string) {
+    settingsNotice = '';
+    settingsError = '';
+
+    if (!window.confirm('Restore this backup? Current data will be replaced.')) {
+      return;
+    }
+
+    settingsBusyLabel = 'Restoring backup...';
+
+    void queueOperation(async () => {
+      const backup = getBackup(id);
+      if (!backup) {
+        throw new Error('The selected backup could not be found.');
+      }
+
+      await withDbSession(async () => {
+        createPreflightBackup('before-restore');
+        await restoreSnapshotToOpenDb(backup.snapshot);
+        await loadAppStateFromOpenDb();
+        currentPage = fetchedCharacters.length > 0 || fetchedWeapons.length > 0 ? 'all-headhunts' : 'import';
+        refreshBackups();
+        settingsNotice = 'Backup restored successfully.';
+      });
+    }).catch((err: any) => {
+      console.error('Failed to restore backup:', err);
+      settingsError = err.message || 'Failed to restore backup.';
+    }).finally(() => {
+      settingsBusyLabel = '';
+    });
   }
 
   // Extract banner ID from page string like 'banner:hues-of-passion'
@@ -642,13 +757,25 @@
           {/if}
         </div>
 
+      {:else if currentPage === 'settings'}
+        <SettingsPage
+          {hasData}
+          {backups}
+          busyLabel={settingsBusyLabel}
+          notice={settingsNotice}
+          error={settingsError}
+          onExport={handleExport}
+          onRestoreBackup={handleRestoreBackup}
+          onDeleteBackup={handleDeleteBackup}
+          onClearData={clearStorage}
+        />
+
       {:else if currentPage === 'all-headhunts' || currentPage.startsWith('banner:') || currentPage === 'all-arsenal-issues' || currentPage.startsWith('weapon-banner:')}
         <!-- Pull History View -->
         <PullHistory
           items={currentPage === 'banner:special-arsenal' || currentPage === 'banner:basic-arsenal' || currentPage.startsWith('weapon-banner:') || currentPage === 'all-arsenal-issues' ? fetchedWeapons : fetchedCharacters}
           isWeaponView={currentPage === 'banner:special-arsenal' || currentPage === 'banner:basic-arsenal' || currentPage.startsWith('weapon-banner:') || currentPage === 'all-arsenal-issues'}
           bannerId={activeBannerId}
-          onExport={handleExport}
           pityStats={pityStats}
         />
       {/if}

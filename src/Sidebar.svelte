@@ -81,6 +81,8 @@
     { id: 'special-arsenal', label: 'Special Arsenal' },
     { id: 'basic-arsenal', label: 'Basic Arsenal' }
   ];
+
+
 </script>
 
 <aside
@@ -160,10 +162,21 @@
         </button>
       {/each}
     </div>
+
+
   </nav>
 
   <!-- Bottom actions -->
   <div class="p-4 border-t border-zinc-700/50 flex flex-col justify-center items-center gap-4">
+    <button
+      on:click={() => handleNav('settings')}
+      class="w-full flex items-center justify-center gap-3 px-3 py-2.5 rounded-xl text-base font-semibold transition-all duration-200 group
+        {currentPage === 'settings' ? 'bg-zinc-800 text-white border border-zinc-700/50 shadow-sm relative overflow-hidden' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200 border border-transparent'}"
+    >
+
+      <Icon icon="ph:gear-six-bold" class="text-xl flex-shrink-0 {currentPage === 'settings' ? 'text-[#f7e704]' : ''}" />
+      <span>Settings</span>
+    </button>
     <a href="https://github.com/Renari/PROTORIG.app" target="_blank" rel="noopener noreferrer" class="opacity-70 hover:opacity-100 transition-opacity">
       <img src={githubLogo} alt="GitHub Repository" class="h-8 w-auto" />
     </a>

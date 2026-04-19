@@ -55,7 +55,6 @@
   export let items: GachaRecordItem[];
   export let bannerId: string = 'all';
   export let isWeaponView: boolean = false;
-  export let onExport: () => void;
   export let pityStats: PityStats | null = null;
 
   // Rarity filter state: default shows 5 and 6 only
@@ -316,13 +315,6 @@
           {/if}
         {/if}
       </div>
-      {#if bannerId === 'all'}
-        <div class="flex items-center gap-3 w-full xl:w-auto mt-4 xl:mt-0">
-          <button on:click={onExport} class="flex-1 xl:flex-none justify-center bg-primary-500 hover:bg-primary-400 text-zinc-950 px-4 py-2 rounded-xl text-sm font-bold shadow-md transition-colors flex items-center gap-2">
-            Export
-          </button>
-        </div>
-      {/if}
     </div>
   </div>
 
