@@ -203,7 +203,7 @@
       {#each specialBanners as sp}
         <button
           on:click={() => activeSpecialId = sp.id}
-          class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 {activeSpecialId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer {activeSpecialId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
         >
           {sp.poolName}
         </button>
@@ -214,7 +214,7 @@
       {#each specialWeaponBanners as sp}
         <button
           on:click={() => activeWeaponSpecialId = sp.id}
-          class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 {activeWeaponSpecialId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer {activeWeaponSpecialId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
         >
           {sp.poolName}
         </button>
@@ -225,7 +225,7 @@
       {#each standardWeaponBanners as sp}
         <button
           on:click={() => activeWeaponStandardId = sp.id}
-          class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 {activeWeaponStandardId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer {activeWeaponStandardId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
         >
           {sp.poolName}
         </button>
@@ -323,21 +323,21 @@
     <span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Filter:</span>
     <button
       on:click={() => toggleRarity(6)}
-      class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 border
+      class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 border cursor-pointer
         {showRarity6 ? 'bg-[#ff7000]/10 text-[#ff7000] border-[#ff7000]' : 'bg-zinc-800 text-zinc-500 border-zinc-700'}"
     >
       6★
     </button>
     <button
       on:click={() => toggleRarity(5)}
-      class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 border
+      class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 border cursor-pointer
         {showRarity5 ? 'bg-[#ffba03]/10 text-[#ffba03] border-[#ffba03]' : 'bg-zinc-800 text-zinc-500 border-zinc-700'}"
     >
       5★
     </button>
     <button
       on:click={() => toggleRarity(4)}
-      class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 border
+      class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 border cursor-pointer
         {showRarity4 ? 'bg-[#9451f8]/10 text-[#9451f8] border-[#9451f8]' : 'bg-zinc-800 text-zinc-500 border-zinc-700'}"
     >
       4★
