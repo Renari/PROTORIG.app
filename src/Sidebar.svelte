@@ -98,7 +98,7 @@
         <h1 class="text-base font-extrabold text-white tracking-tight leading-none">PROTORIG.app</h1>
       </div>
     </div>
-    <button class="md:hidden text-zinc-400 hover:text-white p-2 -mr-2" on:click={onClose}>
+    <button class="md:hidden text-zinc-400 hover:text-white p-2 -mr-2 cursor-pointer" on:click={onClose}>
       <Icon icon="ph:x-bold" class="text-xl" />
     </button>
   </div>
@@ -114,7 +114,7 @@
         {disabled}
         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group
           {active ? 'bg-zinc-800 text-white border border-zinc-700/50 shadow-sm relative overflow-hidden' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200 border border-transparent'}
-          {disabled ? 'opacity-30 cursor-not-allowed' : ''}"
+          {disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}"
       >
         {#if active}
           <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1/2 bg-primary-500 rounded-r-md"></div>
@@ -130,7 +130,7 @@
         {@const bannerActive = currentPage === `banner:${cat.id}`}
         <button
           on:click={() => handleNav(`banner:${cat.id}`)}
-          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group border relative overflow-hidden
+          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group border relative overflow-hidden cursor-pointer
             {bannerActive ? 'bg-zinc-800 text-white border-zinc-700/50 shadow-sm' : 'text-zinc-400 border-transparent hover:bg-zinc-800/50 hover:text-zinc-200'}"
         >
           {#if bannerActive}
@@ -148,7 +148,7 @@
         {@const bannerActive = currentPage === `banner:${cat.id}`}
         <button
           on:click={() => handleNav(`banner:${cat.id}`)}
-          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group border relative overflow-hidden
+          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group border relative overflow-hidden cursor-pointer
             {bannerActive ? 'bg-zinc-800 text-white border-zinc-700/50 shadow-sm' : 'text-zinc-400 border-transparent hover:bg-zinc-800/50 hover:text-zinc-200'}"
         >
           {#if bannerActive}
@@ -170,7 +170,7 @@
   <div class="p-4 border-t border-zinc-700/50 flex flex-col justify-center items-center gap-4">
     <button
       on:click={() => handleNav('settings')}
-      class="w-full flex items-center justify-center gap-3 px-3 py-2.5 rounded-xl text-base font-semibold transition-all duration-200 group
+      class="w-full flex items-center justify-center gap-3 px-3 py-2.5 rounded-xl text-base font-semibold transition-all duration-200 group cursor-pointer
         {currentPage === 'settings' ? 'bg-zinc-800 text-white border border-zinc-700/50 shadow-sm relative overflow-hidden' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200 border border-transparent'}"
     >
 
