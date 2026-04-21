@@ -204,7 +204,7 @@ async function seedStaticData(): Promise<void> {
 
 /**
  * Initialize the database. Creates/opens the OPFS-persisted SQLite database,
- * creates tables if they don't exist, and seeds static lookup data.
+ * creates tables if they don't exist, and re-applies static lookup data.
  */
 export async function initDb(): Promise<void> {
   if (dbReady && getOpenSqliteConnection()) {
@@ -218,10 +218,10 @@ export async function initDb(): Promise<void> {
 
     if (existingObjects.size === 0 || missingObjects.length > 0) {
       await ensureSchema();
-      await seedStaticData();
       await verifySchemaObjects();
     }
 
+    await seedStaticData();
     await verifyDatabaseIntegrity();
     dbReady = true;
   } catch (error) {
