@@ -39,6 +39,7 @@
   import gachaPoolIconHeadhuntWeapon from './assets/icons/gachapool_headhunt_weapon_icon.png';
   import type { GachaRecordItem } from './lib/api';
   import type { PityStats } from './lib/db';
+  import { buildGuaranteedPullLookup } from './lib/guarantee';
   import {
     CHARACTER_GACHA_POOL_TYPES,
     DUPLICATE_GUARANTEE_LIMIT,
@@ -105,6 +106,7 @@
 
   // Sort by seqId descending (newest first)
   $: sortedItems = [...filteredItems].sort((a, b) => Number(b.seqId) - Number(a.seqId));
+  $: guaranteedPulls = buildGuaranteedPullLookup(items);
 
   $: totalInView = filteredByBanner.length;
   $: sixStarCount = filteredByBanner.filter(i => i.rarity === 6).length;
@@ -374,6 +376,9 @@
                 {#if item.isNew}
                   <span class="bg-zinc-700/80 text-zinc-300 border border-zinc-600/50 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm">New</span>
                 {/if}
+                {#if guaranteedPulls[item.seqId]}
+                  <span class="bg-[#ef4444]/15 text-[#ef4444] border border-[#ef4444]/30 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm">Guaranteed</span>
+                {/if}
                 {#if 'isFree' in item && item.isFree}
                   <span class="bg-primary-500/20 text-primary-400 border border-primary-500/30 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm" title="Free pulls do not count towards your pity limit.">Free</span>
                 {/if}
@@ -415,6 +420,9 @@
               </span>
               {#if item.isNew}
                 <span class="bg-zinc-700/80 text-zinc-300 border border-zinc-600/50 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm">New</span>
+              {/if}
+              {#if guaranteedPulls[item.seqId]}
+                <span class="bg-[#ef4444]/15 text-[#ef4444] border border-[#ef4444]/30 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm">Guaranteed</span>
               {/if}
               {#if 'isFree' in item && item.isFree}
                 <span class="bg-primary-500/20 text-primary-400 border border-primary-500/30 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm">Free</span>
