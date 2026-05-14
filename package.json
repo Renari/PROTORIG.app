@@ -28,7 +28,7 @@
     "he": "^1.2.0",
     "jsdom": "^28.1.0",
     "postcss": "^8.5.8",
-    "svelte": "^5.45.2",
+    "svelte": "^5.55.7",
     "svelte-check": "^4.3.4",
     "tailwindcss": "^4.2.1",
     "typescript": "~5.9.3",
