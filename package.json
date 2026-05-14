@@ -27,7 +27,7 @@
     "express": "^5.2.1",
     "he": "^1.2.0",
     "jsdom": "^28.1.0",
-    "postcss": "^8.5.8",
+    "postcss": "^8.5.14",
     "svelte": "^5.55.7",
     "svelte-check": "^4.3.4",
     "tailwindcss": "^4.2.1",
