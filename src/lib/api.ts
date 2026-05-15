@@ -47,6 +47,13 @@ export interface EndfieldGachaResponse {
   msg: string;
 }
 
+export const CHARACTER_FETCH_POOL_TYPES = [
+  CHARACTER_GACHA_POOL_TYPES.SPECIAL,
+  CHARACTER_GACHA_POOL_TYPES.STANDARD,
+  CHARACTER_GACHA_POOL_TYPES.BEGINNER,
+  CHARACTER_GACHA_POOL_TYPES.JOINT,
+];
+
 export async function fetchAllCharacters(
   token: string,
   serverId: string,
@@ -58,7 +65,7 @@ export async function fetchAllCharacters(
 
   let allCharacters: EndfieldGachaCharacter[] = [];
 
-  for (const poolType of Object.values(CHARACTER_GACHA_POOL_TYPES)) {
+  for (const poolType of CHARACTER_FETCH_POOL_TYPES) {
     let seqId = '';
     let hasMore = true;
 

@@ -6,11 +6,11 @@ export interface BannerInfo {
   poolType: string;
   poolName: string;
   /**
-   * Optional ID of the featured character or weapon for this banner.
+   * Optional ID or IDs of featured characters or weapons for this banner.
    * Must match `EndfieldGachaCharacter.charId` or `EndfieldGachaWeapon.weaponId` and is typically only set for
-   * special/limited character or weapon banners used in guarantee reset logic.
+   * special/limited character, joint character, or weapon banners used in guarantee reset logic.
    */
-  featured?: string;
+  featured?: string | string[];
 }
 
 /**
@@ -21,6 +21,7 @@ export enum CHARACTER_GACHA_POOL_TYPES {
   SPECIAL = 'E_CharacterGachaPoolType_Special',
   STANDARD = 'E_CharacterGachaPoolType_Standard',
   BEGINNER = 'E_CharacterGachaPoolType_Beginner',
+  JOINT = 'E_CharacterGachaPoolType_Joint',
 }
 
 /**
@@ -41,6 +42,32 @@ export const DUPLICATE_GUARANTEE_LIMIT = 240;
 export const WEAPON_PITY_LIMIT = 40;
 export const WEAPON_GUARANTEE_LIMIT = 80;
 export const WEAPON_DUPLICATE_GUARANTEE_LIMIT = 180;
+
+export const SHARED_CHARACTER_GACHA_POOL_TYPES = [
+  CHARACTER_GACHA_POOL_TYPES.SPECIAL,
+  CHARACTER_GACHA_POOL_TYPES.STANDARD,
+  CHARACTER_GACHA_POOL_TYPES.BEGINNER,
+];
+
+export function isJointBanner(banner: BannerInfo): boolean {
+  return banner.poolType === CHARACTER_GACHA_POOL_TYPES.JOINT;
+}
+
+export function isWeaponBanner(banner: BannerInfo): boolean {
+  return banner.poolType === 'weapon';
+}
+
+export function isSpecialBanner(banner: BannerInfo): boolean {
+  return banner.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL;
+}
+
+export function getBannerPityType(banner: BannerInfo): string {
+  if (isJointBanner(banner) || isWeaponBanner(banner)) {
+    return banner.id;
+  }
+
+  return banner.poolType;
+}
 
 /**
  * Checks whether an item belongs to a specific banner

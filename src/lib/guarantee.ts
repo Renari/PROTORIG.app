@@ -6,6 +6,7 @@ import {
   KNOWN_BANNERS,
   WEAPON_DUPLICATE_GUARANTEE_LIMIT,
   WEAPON_GUARANTEE_LIMIT,
+  isJointBanner,
   itemMatchesBanner,
   type BannerInfo,
 } from './banners';
@@ -28,11 +29,13 @@ function isFeaturedPull(item: GachaRecordItem, banner: BannerInfo): boolean {
     return false;
   }
 
+  const featuredIds = Array.isArray(banner.featured) ? banner.featured : [banner.featured];
+
   if (isWeaponItem(item)) {
-    return item.weaponId === banner.featured;
+    return featuredIds.includes(item.weaponId);
   }
 
-  return item.charId === banner.featured;
+  return featuredIds.includes(item.charId);
 }
 
 function resolveGuaranteeBanner(item: GachaRecordItem): BannerInfo | null {
@@ -50,7 +53,10 @@ function resolveGuaranteeBanner(item: GachaRecordItem): BannerInfo | null {
       return banner.poolType === 'weapon' && itemMatchesBanner(item, banner);
     }
 
-    return banner.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL && itemMatchesBanner(item, banner);
+    return (
+      (banner.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL || isJointBanner(banner)) &&
+      itemMatchesBanner(item, banner)
+    );
   }) ?? null;
 }
 
@@ -66,6 +72,14 @@ function isGuaranteedPull(
   const nextPullNumber = state.nonFreePulls + 1;
   const firstLimit = isWeaponItem(item) ? WEAPON_GUARANTEE_LIMIT : GUARANTEE_LIMIT;
   const duplicateLimit = isWeaponItem(item) ? WEAPON_DUPLICATE_GUARANTEE_LIMIT : DUPLICATE_GUARANTEE_LIMIT;
+
+  if (isJointBanner(banner)) {
+    if (nextPullNumber < firstLimit) {
+      return false;
+    }
+
+    return nextPullNumber === firstLimit || nextPullNumber % duplicateLimit === 0;
+  }
 
   if (state.featuredPulls < 1) {
     return nextPullNumber === firstLimit;

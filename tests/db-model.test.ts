@@ -147,4 +147,49 @@ describe('buildPityMutationPlan', () => {
       guarantee: 3,
     });
   });
+
+  it('tracks joint character pity independently from normal special pity and ignores free pulls', () => {
+    const plan = buildPityMutationPlan({
+      characterPoolsByType: {
+        [CHARACTER_GACHA_POOL_TYPES.SPECIAL]: [
+          { id: 'special-a', featured: 'char_a', guarantee: 0 },
+        ],
+        joint_1_2_2: [
+          { id: 'joint_1_2_2', featured: '["char_joint_a","char_joint_b"]', guarantee: 0 },
+        ],
+      },
+      characterPullsByType: {
+        [CHARACTER_GACHA_POOL_TYPES.SPECIAL]: [
+          { seq_id: 1, pool_id: 'special-a', rarity: 4, char_id: 'char_special', is_free: 0, gacha_ts: 1 },
+        ],
+        joint_1_2_2: [
+          { seq_id: 2, pool_id: 'joint_1_2_2', rarity: 4, char_id: 'free_joint', is_free: 1, gacha_ts: 2 },
+          { seq_id: 3, pool_id: 'joint_1_2_2', rarity: 6, char_id: 'char_joint_a', is_free: 0, gacha_ts: 3 },
+        ],
+      },
+      weaponPoolTypeIds: [],
+      weaponPullsByPoolType: {},
+    });
+
+    expect(plan.charUpdates).toContainEqual({ seq_id: 2, pity: null });
+    expect(plan.charUpdates).toContainEqual({ seq_id: 3, pity: 1 });
+    expect(plan.poolTypeUpdates).toContainEqual({
+      id: CHARACTER_GACHA_POOL_TYPES.SPECIAL,
+      pity_6: 1,
+      pity_5: 1,
+    });
+    expect(plan.poolTypeUpdates).toContainEqual({
+      id: 'joint_1_2_2',
+      pity_6: 0,
+      pity_5: 0,
+    });
+    expect(plan.poolUpdates).toContainEqual({
+      id: 'special-a',
+      guarantee: 1,
+    });
+    expect(plan.poolUpdates).toContainEqual({
+      id: 'joint_1_2_2',
+      guarantee: 1,
+    });
+  });
 });

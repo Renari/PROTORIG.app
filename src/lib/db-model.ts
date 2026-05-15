@@ -1,5 +1,5 @@
 import type { EndfieldGachaCharacter, EndfieldGachaWeapon } from './api';
-import { CHARACTER_GACHA_POOL_TYPES } from './banners';
+import { SHARED_CHARACTER_GACHA_POOL_TYPES } from './banners';
 
 export interface MaxIdRow {
   max_id: number | null;
@@ -124,7 +124,13 @@ export function buildPityMutationPlan(input: PityComputationInput): PityMutation
   const poolTypeUpdates: PoolTypeUpdate[] = [];
   const poolUpdates: PoolUpdate[] = [];
 
-  for (const poolType of Object.values(CHARACTER_GACHA_POOL_TYPES)) {
+  const characterPoolTypes = new Set([
+    ...SHARED_CHARACTER_GACHA_POOL_TYPES,
+    ...Object.keys(input.characterPoolsByType),
+    ...Object.keys(input.characterPullsByType),
+  ]);
+
+  for (const poolType of characterPoolTypes) {
     const poolsForType = input.characterPoolsByType[poolType] ?? [];
     const pulls = input.characterPullsByType[poolType] ?? [];
     const guaranteeCounts: Record<string, number> = {};

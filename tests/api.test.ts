@@ -21,7 +21,12 @@ describe.skipIf(!process.env.U8_TOKEN)('Endfield API Fetching via Native Node Fe
     let totalCharPulls = 0;
     
     try {
-      const charPools = ['E_CharacterGachaPoolType_Special', 'E_CharacterGachaPoolType_Standard'];
+      const charPools = [
+        'E_CharacterGachaPoolType_Special',
+        'E_CharacterGachaPoolType_Standard',
+        'E_CharacterGachaPoolType_Beginner',
+        'E_CharacterGachaPoolType_Joint',
+      ];
 
       for (const poolType of charPools) {
         let seqId = '';
