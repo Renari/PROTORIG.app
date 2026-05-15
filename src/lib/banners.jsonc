@@ -6,6 +6,18 @@
     "featured": ["chr_0029_pograni", "chr_0013_aglina", "chr_0016_laevat", "chr_0025_ardelia"]
   },
   {
+    "id": "weponbox_1_2_3",
+    "poolType": "weapon",
+    "poolName": "Swift Walker Issue",
+    "featured": "wpn_funnel_0011"
+  },
+  {
+    "id": "weponbox_1_2_2",
+    "poolType": "weapon",
+    "poolName": "Smelting Fire Issue",
+    "featured": "wpn_sword_0006"
+  },
+  {
     "id": "special_1_2_1",
     "poolType": "E_CharacterGachaPoolType_Special",
     "poolName": "Thunder of Renewal",
