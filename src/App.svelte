@@ -456,12 +456,6 @@
 
     <div class="flex-1 overflow-y-auto">
       <div class="p-6 md:p-8 lg:p-10 max-w-6xl mx-auto relative z-10 w-full">
-      <div class="mb-6 bg-red-500/10 border border-red-500/30 text-red-200 px-4 py-3 rounded-xl flex items-start gap-3">
-        <Icon icon="ph:warning-circle-duotone" class="text-xl text-red-400 flex-shrink-0 mt-0.5" />
-        <p class="text-sm font-medium leading-relaxed">
-          I do not have data for how rerun banners function, it is advised to not import data until further notice as it may not work as expected. If you have pulled till guarantee on the rerun banner please contact me.
-        </p>
-      </div>
       {#if startupErrorMsg}
         <div class="mb-6 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl flex items-start gap-3">
           <Icon icon="ph:warning-circle-duotone" class="text-xl text-red-400 flex-shrink-0 mt-0.5" />

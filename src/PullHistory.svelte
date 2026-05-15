@@ -49,6 +49,9 @@
     WEAPON_PITY_LIMIT,
     WEAPON_DUPLICATE_GUARANTEE_LIMIT,
     WEAPON_GUARANTEE_LIMIT,
+    isJointBanner,
+    isSpecialBanner,
+    isWeaponBanner,
     itemMatchesBanner,
     type BannerInfo
   } from './lib/banners';
@@ -64,10 +67,12 @@
   let showRarity4 = false;
 
   const specialBanners = KNOWN_BANNERS.filter(b => b.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL);
+  const jointBanners = KNOWN_BANNERS.filter(isJointBanner);
   const specialWeaponBanners = KNOWN_BANNERS.filter(b => b.poolType === 'weapon' && !b.id.startsWith('weaponbox_constant'));
   const standardWeaponBanners = KNOWN_BANNERS.filter(b => b.poolType === 'weapon' && b.id.startsWith('weaponbox_constant'));
   
   let activeSpecialId = specialBanners[0]?.id || '';
+  let activeJointId = jointBanners[0]?.id || '';
   let activeWeaponSpecialId = specialWeaponBanners[0]?.id || '';
   let activeWeaponStandardId = standardWeaponBanners[0]?.id || '';
 
@@ -81,6 +86,9 @@
     }
     if (bannerId === 'special-headhunting') {
       return KNOWN_BANNERS.find(b => b.id === activeSpecialId) || specialBanners[0];
+    }
+    if (bannerId === 'joint-headhunting') {
+      return KNOWN_BANNERS.find(b => b.id === activeJointId) || jointBanners[0];
     }
     if (bannerId === 'special-arsenal') {
       return KNOWN_BANNERS.find(b => b.id === activeWeaponSpecialId) || specialWeaponBanners[0];
@@ -112,23 +120,32 @@
   $: sixStarCount = filteredByBanner.filter(i => i.rarity === 6).length;
   $: fiveStarCount = filteredByBanner.filter(i => i.rarity === 5).length;
   
-  function isNonFreeFeatured(item: GachaRecordItem, featuredId: string | undefined): boolean {
+  function isNonFreeFeatured(item: GachaRecordItem, featuredId: string | string[] | undefined): boolean {
     if (!featuredId) return false;
     if ('isFree' in item && item.isFree) return false;
-    return ('charId' in item ? item.charId : item.weaponId) === featuredId;
+    const featuredIds = Array.isArray(featuredId) ? featuredId : [featuredId];
+    return featuredIds.includes('charId' in item ? item.charId : item.weaponId);
   }
 
   // Guarantee uses the following formula:
   //   f(p, n) = { firstLimit - n  if p < 1,  dupLimit - (n % dupLimit)  if p >= 1 }
   // p = times the featured was obtained (non-free), n = total non-free pulls on this banner.
+  $: showGuaranteeStats = isSpecialBanner(currentBanner) ||
+    isJointBanner(currentBanner) ||
+    (isWeaponView && isWeaponBanner(currentBanner) && !currentBanner.id.startsWith('weaponbox_constant'));
+
   $: guarantee = (() => {
-    if (currentBanner.poolType !== CHARACTER_GACHA_POOL_TYPES.SPECIAL && !isWeaponView) {
+    if (!showGuaranteeStats) {
       return 0;
     }
     const firstLimit = isWeaponView ? WEAPON_GUARANTEE_LIMIT : CHARACTER_GUARANTEE_LIMIT;
     const dupLimit = isWeaponView ? WEAPON_DUPLICATE_GUARANTEE_LIMIT : DUPLICATE_GUARANTEE_LIMIT;
 
     const n = pityStats?.guarantees[currentBanner.id] || 0;
+    if (isJointBanner(currentBanner)) {
+      return n < firstLimit ? firstLimit - n : dupLimit - (n % dupLimit);
+    }
+
     const p = filteredByBanner.filter(i => isNonFreeFeatured(i, currentBanner.featured)).length;
 
     if (p < 1) {
@@ -139,6 +156,7 @@
 
   // Retrieve global DB-computed tracking values
   $: specialPity = pityStats?.poolTypes[CHARACTER_GACHA_POOL_TYPES.SPECIAL]?.pity6 || 0;
+  $: jointPity = isJointBanner(currentBanner) ? (pityStats?.poolTypes[currentBanner.id]?.pity6 || 0) : 0;
   $: standardPity = pityStats?.poolTypes[CHARACTER_GACHA_POOL_TYPES.STANDARD]?.pity6 || 0;
   $: beginnerPity = pityStats?.poolTypes[CHARACTER_GACHA_POOL_TYPES.BEGINNER]?.pity6 || 0;
   $: weaponPity = isWeaponView && bannerId !== 'all' ? (pityStats?.poolTypes[currentBanner.id]?.pity6 || 0) : 0;
@@ -206,6 +224,17 @@
         <button
           on:click={() => activeSpecialId = sp.id}
           class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer {activeSpecialId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
+        >
+          {sp.poolName}
+        </button>
+      {/each}
+    </div>
+  {:else if bannerId === 'joint-headhunting'}
+    <div class="flex flex-wrap items-center gap-2 p-1.5 bg-zinc-800/80 rounded-xl border border-zinc-700/50 shadow-sm backdrop-blur-xl">
+      {#each jointBanners as sp}
+        <button
+          on:click={() => activeJointId = sp.id}
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer {activeJointId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
         >
           {sp.poolName}
         </button>
@@ -283,6 +312,14 @@
                 {specialPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
               </p>
             </div>
+            {#each jointBanners as jointBanner}
+              <div class="flex flex-col items-center">
+                <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Joint Pity</p>
+                <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 text-3xl">
+                  {pityStats?.poolTypes[jointBanner.id]?.pity6 || 0}<span class="text-zinc-400">/{PITY_LIMIT}</span>
+                </p>
+              </div>
+            {/each}
             <div class="flex flex-col items-center">
               <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Basic Pity</p>
               <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 text-3xl">
@@ -298,12 +335,14 @@
                 {standardPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
               {:else if currentBanner.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL}
                 {specialPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
+              {:else if isJointBanner(currentBanner)}
+                {jointPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
               {:else if isWeaponView && bannerId !== 'all'}
                 {weaponPity}<span class="text-zinc-400">/{WEAPON_PITY_LIMIT}</span>
               {/if}
             </p>
           </div>
-          {#if currentBanner.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL || (isWeaponView && bannerId !== 'all')}
+          {#if showGuaranteeStats}
             <div class="flex flex-col items-center">
               <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Guarantee</p>
               <p class="font-bold text-[#ef4444] items-baseline justify-center gap-0.5 {bannerImageUrl ? 'text-4xl md:text-5xl mt-1 md:mt-2' : 'text-3xl'}">

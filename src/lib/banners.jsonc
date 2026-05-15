@@ -1,5 +1,11 @@
 [
   {
+    "id": "joint_1_2_2",
+    "poolType": "E_CharacterGachaPoolType_Joint",
+    "poolName": "Fest of Brilliance",
+    "featured": ["chr_0029_pograni", "chr_0013_aglina", "chr_0016_laevat", "chr_0025_ardelia"]
+  },
+  {
     "id": "special_1_2_1",
     "poolType": "E_CharacterGachaPoolType_Special",
     "poolName": "Thunder of Renewal",

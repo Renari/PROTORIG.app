@@ -1,5 +1,12 @@
 import type { EndfieldGachaCharacter, EndfieldGachaWeapon, EndfieldGachaWeaponPool } from './api';
-import { CHARACTER_GACHA_POOL_TYPES, KNOWN_BANNERS } from './banners';
+import {
+  CHARACTER_GACHA_POOL_TYPES,
+  KNOWN_BANNERS,
+  SHARED_CHARACTER_GACHA_POOL_TYPES,
+  getBannerPityType,
+  isJointBanner,
+  isWeaponBanner,
+} from './banners';
 import {
   allSql,
   cleanupSqliteWorkerIfIdle,
@@ -164,10 +171,13 @@ async function seedStaticData(): Promise<void> {
   ];
 
   for (const banner of KNOWN_BANNERS) {
-    if (banner.poolType === 'weapon') {
+    const pityType = getBannerPityType(banner);
+    const featured = Array.isArray(banner.featured) ? JSON.stringify(banner.featured) : (banner.featured ?? null);
+
+    if (isWeaponBanner(banner) || isJointBanner(banner)) {
       statements.push({
         sql: 'INSERT OR IGNORE INTO pool_type (id, pity_6, pity_5) VALUES (:id, :pity6, :pity5)',
-        bind: { id: banner.id, pity6: 0, pity5: 0 },
+        bind: { id: pityType, pity6: 0, pity5: 0 },
       });
       statements.push({
         sql: `
@@ -176,9 +186,9 @@ async function seedStaticData(): Promise<void> {
         `,
         bind: {
           id: banner.id,
-          type: banner.id,
+          type: pityType,
           poolName: banner.poolName,
-          featured: banner.featured ?? null,
+          featured,
           guarantee: 0,
         },
       });
@@ -190,9 +200,9 @@ async function seedStaticData(): Promise<void> {
         `,
         bind: {
           id: banner.id,
-          type: banner.poolType,
+          type: pityType,
           poolName: banner.poolName,
-          featured: banner.featured ?? null,
+          featured,
           guarantee: 0,
         },
       });
@@ -430,7 +440,10 @@ export async function recalculateAllPity(): Promise<void> {
   const characterPoolsByType: Record<string, PoolRow[]> = {};
   const characterPullsByType: Record<string, CharacterPityRow[]> = {};
 
-  for (const poolType of Object.values(CHARACTER_GACHA_POOL_TYPES)) {
+  const jointPoolTypeIds = KNOWN_BANNERS.filter(isJointBanner).map((banner) => banner.id);
+  const characterPoolTypes = [...SHARED_CHARACTER_GACHA_POOL_TYPES, ...jointPoolTypeIds];
+
+  for (const poolType of characterPoolTypes) {
     characterPoolsByType[poolType] = await allSql<PoolRow>(
       'SELECT id, featured, guarantee FROM pools WHERE type = :poolType',
       { ':poolType': poolType }
@@ -447,7 +460,7 @@ export async function recalculateAllPity(): Promise<void> {
     );
   }
 
-  const weaponPoolTypes = await allSql<PoolTypeRow>(
+  const independentPoolTypes = await allSql<PoolTypeRow>(
     `
       SELECT id, pity_6, pity_5
       FROM pool_type
@@ -459,6 +472,7 @@ export async function recalculateAllPity(): Promise<void> {
       ':beginner': CHARACTER_GACHA_POOL_TYPES.BEGINNER,
     }
   );
+  const weaponPoolTypes = independentPoolTypes.filter((row) => !jointPoolTypeIds.includes(row.id));
 
   const weaponPullsByPoolType: Record<string, WeaponPityRow[]> = {};
   for (const poolType of weaponPoolTypes.map((row) => row.id)) {
