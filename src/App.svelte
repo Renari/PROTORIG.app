@@ -498,6 +498,7 @@
                 <div class="space-y-3">
                   <h3 class="text-sm font-bold text-white">Instructions</h3>
                   <ol class="list-decimal list-inside text-sm text-zinc-400 space-y-2 leading-relaxed">
+                    <li>Open the game and view your pull history once to ensure your latest records are saved</li>
                     <li>Open <strong class="text-zinc-200">PowerShell</strong></li>
                     <li>Paste the following command and press Enter:</li>
                   </ol>
@@ -508,7 +509,7 @@
                     <Icon icon="ph:warning-duotone" class="text-lg text-amber-400 flex-shrink-0 mt-0.5" />
                     <p class="text-xs text-amber-300/90 leading-relaxed">Running scripts from the internet can be dangerous. You should <a href="{WINDOWS_PS1}" target="_blank" rel="noopener noreferrer" class="underline text-amber-200 hover:text-white">review the script</a> or have someone you trust review it before running.</p>
                   </div>
-                  <ol start="3" class="list-decimal list-inside text-sm text-zinc-400 space-y-2 leading-relaxed">
+                  <ol start="4" class="list-decimal list-inside text-sm text-zinc-400 space-y-2 leading-relaxed">
                     <li>The URL will be extracted and copied to your clipboard</li>
                     <li>Paste the URL below</li>
                   </ol>
@@ -618,6 +619,7 @@
                 <div class="space-y-3">
                   <h3 class="text-sm font-bold text-white">Instructions</h3>
                   <ol class="list-decimal list-inside text-sm text-zinc-400 space-y-2 leading-relaxed">
+                    <li>Open the game and view your pull history once to ensure your latest records are saved</li>
                     <li>Open a <strong class="text-zinc-200">terminal</strong></li>
                     <li>Run the following command:</li>
                   </ol>
@@ -628,7 +630,7 @@
                     <Icon icon="ph:warning-duotone" class="text-lg text-amber-400 flex-shrink-0 mt-0.5" />
                     <p class="text-xs text-amber-300/90 leading-relaxed">Running scripts from the internet can be dangerous. You should <a href="{LINUX_SH}" target="_blank" rel="noopener noreferrer" class="underline text-amber-200 hover:text-white">review the script</a> or have someone you trust review it before running.</p>
                   </div>
-                  <ol start="3" class="list-decimal list-inside text-sm text-zinc-400 space-y-2 leading-relaxed">
+                  <ol start="4" class="list-decimal list-inside text-sm text-zinc-400 space-y-2 leading-relaxed">
                     <li>The script will search common Wine/Proton prefix locations for the <strong class="text-zinc-200">data_1</strong> file</li>
                     <li>The URL will be extracted and copied to your clipboard</li>
                     <li>Paste the URL below</li>
