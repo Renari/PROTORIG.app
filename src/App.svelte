@@ -498,7 +498,7 @@
                 <div class="space-y-3">
                   <h3 class="text-sm font-bold text-white">Instructions</h3>
                   <ol class="list-decimal list-inside text-sm text-zinc-400 space-y-2 leading-relaxed">
-                    <li>Open the game and view your pull history once to ensure your latest records are saved</li>
+                    <li>Open the game and view your pull history</li>
                     <li>Open <strong class="text-zinc-200">PowerShell</strong></li>
                     <li>Paste the following command and press Enter:</li>
                   </ol>
@@ -619,7 +619,7 @@
                 <div class="space-y-3">
                   <h3 class="text-sm font-bold text-white">Instructions</h3>
                   <ol class="list-decimal list-inside text-sm text-zinc-400 space-y-2 leading-relaxed">
-                    <li>Open the game and view your pull history once to ensure your latest records are saved</li>
+                    <li>Open the game and view your pull history</li>
                     <li>Open a <strong class="text-zinc-200">terminal</strong></li>
                     <li>Run the following command:</li>
                   </ol>
