@@ -1,5 +1,17 @@
 [
   {
+    "id": "special_1_3_1",
+    "poolType": "E_CharacterGachaPoolType_Special",
+    "poolName": "Fists of No Regrets",
+    "featured": "chr_0031_mifu"
+  },
+  {
+    "id": "weponbox_1_3_1",
+    "poolType": "weapon",
+    "poolName": "Scarlet Knot Issue",
+    "featured": "wpn_claym_0017"
+  },
+  {
     "id": "joint_1_2_2",
     "poolType": "E_CharacterGachaPoolType_Joint",
     "poolName": "Fest of Brilliance",
