@@ -27,7 +27,7 @@ jobs:
           VITE_WISP_URL: wss://protorig.app:8443
         run: npm run build
       - name: Deploy
-        uses: easingthemes/ssh-deploy@v5.1.1
+        uses: easingthemes/ssh-deploy@v6
         with:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           ARGS: "-rlgoDzvcp -i --delete"
