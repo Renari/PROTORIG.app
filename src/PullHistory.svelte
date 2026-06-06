@@ -312,14 +312,6 @@
                 {specialPity}<span class="text-zinc-400">/{PITY_LIMIT}</span>
               </p>
             </div>
-            {#each jointBanners as jointBanner}
-              <div class="flex flex-col items-center">
-                <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Joint Pity</p>
-                <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 text-3xl">
-                  {pityStats?.poolTypes[jointBanner.id]?.pity6 || 0}<span class="text-zinc-400">/{PITY_LIMIT}</span>
-                </p>
-              </div>
-            {/each}
             <div class="flex flex-col items-center">
               <p class="text-zinc-500 text-xs md:text-sm font-semibold uppercase tracking-wider">Basic Pity</p>
               <p class="font-bold text-[#38bdf8] flex items-baseline justify-center gap-0.5 text-3xl">
