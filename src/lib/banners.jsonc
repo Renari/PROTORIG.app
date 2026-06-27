@@ -1,5 +1,17 @@
 [
   {
+    "id": "special_1_3_2",
+    "poolType": "E_CharacterGachaPoolType_Special",
+    "poolName": "Expunger of Sin",
+    "featured": "chr_0033_camille"
+  },
+  {
+    "id": "weponbox_1_3_2",
+    "poolType": "weapon",
+    "poolName": "Crimson Hued Issue",
+    "featured": "wpn_lance_0015"
+  },
+  {
     "id": "special_1_3_1",
     "poolType": "E_CharacterGachaPoolType_Special",
     "poolName": "Fists of No Regrets",
