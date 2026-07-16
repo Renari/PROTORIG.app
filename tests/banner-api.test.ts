@@ -11,7 +11,8 @@ vi.mock('libcurl.js/bundled', () => ({
   },
 }));
 
-import { CHARACTER_FETCH_POOL_TYPES } from '../src/lib/api';
+import { libcurl } from 'libcurl.js/bundled';
+import { CHARACTER_FETCH_POOL_TYPES, fetchAllCharacters, getAssociatedWeaponPoolId, getMissingBannerCandidates, inferBannerPoolType, inferCharacterPoolType, mapContentToBanner, type BannerCandidate } from '../src/lib/api';
 import { CHARACTER_GACHA_POOL_TYPES, KNOWN_BANNERS } from '../src/lib/banners';
 
 describe('banner and API metadata', () => {
@@ -34,5 +35,82 @@ describe('banner and API metadata', () => {
       'chr_0016_laevat',
       'chr_0025_ardelia',
     ]);
+  });
+
+  it('maps live content metadata to database-ready banner metadata', () => {
+    const banner = mapContentToBanner(
+      { id: 'special_9_9_9', poolName: 'special_9_9_9', poolType: CHARACTER_GACHA_POOL_TYPES.SPECIAL },
+      {
+        pool_gacha_type: 'char',
+        pool_name: 'Future Banner',
+        pool_type: 'special',
+        up6_name: 'Future Operator',
+        all: [
+          { id: 'chr_future', name: 'Future Operator', rarity: 6 },
+          { id: 'chr_other', name: 'Other Operator', rarity: 6 },
+        ],
+      },
+    );
+
+    expect(banner).toEqual({
+      id: 'special_9_9_9',
+      poolName: 'Future Banner',
+      poolType: CHARACTER_GACHA_POOL_TYPES.SPECIAL,
+      featured: 'chr_future',
+    });
+  });
+
+  it('classifies the observed pool ID formats', () => {
+    expect(inferCharacterPoolType('joint_9_9_9')).toBe(CHARACTER_GACHA_POOL_TYPES.JOINT);
+    expect(inferCharacterPoolType('beginner')).toBe(CHARACTER_GACHA_POOL_TYPES.BEGINNER);
+    expect(inferCharacterPoolType('special_beginner_event')).toBe(CHARACTER_GACHA_POOL_TYPES.SPECIAL);
+    expect(inferCharacterPoolType('special_standard_event')).toBe(CHARACTER_GACHA_POOL_TYPES.SPECIAL);
+    expect(inferBannerPoolType('weponbox_9_9_9')).toBe('weapon');
+    expect(inferBannerPoolType('weaponbox_constant_9')).toBe('weapon');
+    expect(getAssociatedWeaponPoolId('special_1_4_1')).toBe('weponbox_1_4_1');
+  });
+
+  it('returns only pool IDs observed in the import that are missing from the database', () => {
+    const known = [{
+      id: 'special_1_3_2',
+      poolName: 'Expunger of Sin',
+      poolType: CHARACTER_GACHA_POOL_TYPES.SPECIAL,
+    }];
+    expect(getMissingBannerCandidates([
+      known[0],
+      {
+        id: 'special_1_4_1',
+        poolName: 'North Yearns the Rift Vigile',
+        poolType: CHARACTER_GACHA_POOL_TYPES.SPECIAL,
+      },
+    ], known)).toEqual([{
+      id: 'special_1_4_1',
+      poolName: 'North Yearns the Rift Vigile',
+      poolType: CHARACTER_GACHA_POOL_TYPES.SPECIAL,
+    }]);
+  });
+
+  it('observes pool IDs returned by the API even when their pulls already exist', async () => {
+    vi.mocked(libcurl.fetch).mockImplementation(async (url) => {
+      const poolType = new URL(String(url)).searchParams.get('pool_type');
+      const list = poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL ? [{
+        poolId: 'special_1_4_1', poolName: 'North Yearns the Rift Vigile', charId: 'chr_new', charName: 'New',
+        rarity: 4, isFree: false, isNew: false, gachaTs: '200', seqId: '2',
+      }] : [];
+      return {
+        ok: true,
+        text: async () => JSON.stringify({ code: 0, data: { list, hasMore: false }, msg: '' }),
+      } as any;
+    });
+    const observed: BannerCandidate[] = [];
+
+    const pulls = await fetchAllCharacters('token', '3', 'en-us', () => {}, 2, (pool) => observed.push(pool));
+
+    expect(pulls).toEqual([]);
+    expect(observed).toContainEqual({
+      id: 'special_1_4_1',
+      poolName: 'North Yearns the Rift Vigile',
+      poolType: CHARACTER_GACHA_POOL_TYPES.SPECIAL,
+    });
   });
 });

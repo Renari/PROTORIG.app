@@ -6,6 +6,7 @@ import {
   getBannerPityType,
   isJointBanner,
   isWeaponBanner,
+  type BannerInfo,
 } from './banners';
 import {
   allSql,
@@ -309,6 +310,71 @@ export async function insertCharacters(chars: EndfieldGachaCharacter[]): Promise
   })));
 }
 
+/** Upsert API-discovered banner metadata without erasing a previously known featured ID. */
+export async function upsertBanners(banners: BannerInfo[]): Promise<void> {
+  ensureDbReady();
+  const statements: SqliteBatchStatement[] = [];
+
+  for (const banner of banners) {
+    const pityType = getBannerPityType(banner);
+    const featured = Array.isArray(banner.featured) ? JSON.stringify(banner.featured) : (banner.featured ?? null);
+    statements.push({
+      sql: 'INSERT OR IGNORE INTO pool_type (id, pity_6, pity_5) VALUES (:id, 0, 0)',
+      bind: { id: pityType },
+    });
+    statements.push({
+      sql: `
+        INSERT INTO pools (id, type, pool_name, featured, guarantee)
+        VALUES (:id, :type, :poolName, :featured, 0)
+        ON CONFLICT(id) DO UPDATE SET
+          type = excluded.type,
+          pool_name = CASE
+            WHEN excluded.pool_name = excluded.id THEN pools.pool_name
+            ELSE excluded.pool_name
+          END,
+          featured = COALESCE(excluded.featured, pools.featured)
+      `,
+      bind: { id: banner.id, type: pityType, poolName: banner.poolName, featured },
+    });
+  }
+
+  await runTransactionBatch(statements);
+}
+
+export async function getAllBanners(): Promise<BannerInfo[]> {
+  ensureDbReady();
+  const rows = await allSql<{ id: string; type: string; pool_name: string; featured: string | null }>(`
+    SELECT id, type, pool_name, featured FROM pools
+  `);
+
+  const banners = rows.map((row) => {
+    let featured: string | string[] | undefined;
+    if (row.featured) {
+      try {
+        const parsed = JSON.parse(row.featured);
+        featured = Array.isArray(parsed) ? parsed : row.featured;
+      } catch {
+        featured = row.featured;
+      }
+    }
+
+    const poolType = row.type === row.id
+      ? (row.id.toLowerCase().startsWith('joint_') ? CHARACTER_GACHA_POOL_TYPES.JOINT : 'weapon')
+      : row.type;
+    return { id: row.id, poolType, poolName: row.pool_name, featured };
+  });
+
+  const legacyOrder = new Map(KNOWN_BANNERS.map((banner, index) => [banner.id, index]));
+  return banners.sort((a, b) => {
+    const aLegacyIndex = legacyOrder.get(a.id);
+    const bLegacyIndex = legacyOrder.get(b.id);
+    if (aLegacyIndex === undefined && bLegacyIndex !== undefined) return -1;
+    if (aLegacyIndex !== undefined && bLegacyIndex === undefined) return 1;
+    if (aLegacyIndex !== undefined && bLegacyIndex !== undefined) return aLegacyIndex - bLegacyIndex;
+    return b.id.localeCompare(a.id, undefined, { numeric: true });
+  });
+}
+
 /**
  * Insert weapon pool metadata into the pools table.
  */
@@ -440,7 +506,9 @@ export async function recalculateAllPity(): Promise<void> {
   const characterPoolsByType: Record<string, PoolRow[]> = {};
   const characterPullsByType: Record<string, CharacterPityRow[]> = {};
 
-  const jointPoolTypeIds = KNOWN_BANNERS.filter(isJointBanner).map((banner) => banner.id);
+  const jointPoolTypeIds = (await allSql<{ id: string }>(
+    "SELECT id FROM pools WHERE id = type AND lower(id) LIKE 'joint_%'"
+  )).map((row) => row.id);
   const characterPoolTypes = [...SHARED_CHARACTER_GACHA_POOL_TYPES, ...jointPoolTypeIds];
 
   for (const poolType of characterPoolTypes) {

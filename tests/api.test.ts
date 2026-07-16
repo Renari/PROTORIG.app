@@ -1,10 +1,16 @@
 /**
  * @vitest-environment node
  */
-import { describe, it } from 'vitest';
+import { describe, it, vi } from 'vitest';
 // @ts-ignore
 import he from 'he';
 import { config } from 'dotenv';
+
+vi.mock('libcurl.js/bundled', () => ({
+  libcurl: {},
+}));
+
+import { ENDFIELD_USER_AGENT } from '../src/lib/api';
 config();
 
 const VITE_API_CHAR_URL = 'https://ef-webview.gryphline.com/api/record/char';
@@ -47,7 +53,7 @@ describe.skipIf(!process.env.U8_TOKEN)('Endfield API Fetching via Native Node Fe
           const response = await fetch(requestUrl, {
             method: 'GET',
             headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+              'User-Agent': ENDFIELD_USER_AGENT,
               'Accept': 'application/json, text/plain, */*',
               'Accept-Language': 'en-US,en;q=0.9',
               'Connection': 'keep-alive',
@@ -93,7 +99,7 @@ describe.skipIf(!process.env.U8_TOKEN)('Endfield API Fetching via Native Node Fe
       const weaponPoolsResponse = await fetch(`${VITE_API_WEAPON_POOL_URL}?${weaponPoolParams.toString()}`, {
         method: 'GET',
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'User-Agent': ENDFIELD_USER_AGENT,
           'Accept': 'application/json, text/plain, */*',
           'Accept-Language': 'en-US,en;q=0.9',
           'Connection': 'keep-alive',
@@ -135,7 +141,7 @@ describe.skipIf(!process.env.U8_TOKEN)('Endfield API Fetching via Native Node Fe
           const response = await fetch(requestUrl, {
             method: 'GET',
             headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+              'User-Agent': ENDFIELD_USER_AGENT,
               'Accept': 'application/json, text/plain, */*',
               'Accept-Language': 'en-US,en;q=0.9',
               'Connection': 'keep-alive',
