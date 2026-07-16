@@ -33,6 +33,16 @@ npm run build
 
 This will run `vite build` to optimize the frontend into the `dist/` directory and compile the `wisp-server.mjs` using `bun`.
 
+### Updating historical banner metadata
+
+Maintainers can update `src/lib/banners.jsonc` from the Endfield APIs with:
+
+```bash
+./scripts/update-banners.sh
+```
+
+The script prompts for a webview URL containing a valid `u8_token`, discovers pool IDs from the record APIs, confirms active metadata through `/api/content`, and preserves existing historical entries. Use `--dry-run` to preview the resulting JSON, or `--pool-id ID` to check a known public pool ID without a token.
+
 ## Tech Stack
 
 - **Frontend**: [Svelte](https://svelte.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite](https://vitejs.dev/), [Tailwind CSS](https://tailwindcss.com/)
