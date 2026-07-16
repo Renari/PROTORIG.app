@@ -3,7 +3,8 @@
   import Icon from '@iconify/svelte';
   // @ts-ignore
   import he from 'he';
-  import { fetchAllCharacters, fetchAllWeapons, type EndfieldGachaCharacter, type EndfieldGachaWeapon, type EndfieldGachaWeaponPool } from './lib/api';
+  import { fetchAllCharacters, fetchAllWeapons, fetchBannerMetadata, getAssociatedWeaponPoolId, getMissingBannerCandidates, inferBannerPoolType, type BannerCandidate, type EndfieldGachaCharacter, type EndfieldGachaWeapon, type EndfieldGachaWeaponPool } from './lib/api';
+  import { CHARACTER_GACHA_POOL_TYPES, KNOWN_BANNERS, type BannerInfo } from './lib/banners';
   import { createBackup, deleteBackup, getBackup, listBackups, type BackupReason, type BackupRecord, type BackupSnapshot } from './lib/backups';
   import { exportEGF } from './lib/egf';
   import {
@@ -12,9 +13,11 @@
     closeDb,
     getAllCharacters,
     getAllWeapons,
+    getAllBanners,
     insertCharacters,
     insertWeapons,
     insertWeaponPools,
+    upsertBanners,
     clearAllData,
     recalculateAllPity,
     getPityStats,
@@ -45,6 +48,7 @@
   let fetchedCharacters: EndfieldGachaCharacter[] = [];
   let fetchedWeapons: EndfieldGachaWeapon[] = [];
   let pityStats: PityStats | null = null;
+  let banners: BannerInfo[] = KNOWN_BANNERS;
   let fetchingStatus = '';
   let backups: BackupRecord[] = [];
   let settingsNotice = '';
@@ -117,6 +121,7 @@
   async function loadAppStateFromOpenDb() {
     fetchedCharacters = await getAllCharacters();
     fetchedWeapons = await getAllWeapons();
+    banners = await getAllBanners();
     pityStats = await getPityStats();
   }
 
@@ -231,7 +236,7 @@
     return tokenUrls.length > 0 ? tokenUrls[tokenUrls.length - 1] : null;
   }
 
-  function parseImportUrl(inputUrl: string): { token: string; serverId: string; lang: string } {
+  function parseImportUrl(inputUrl: string): { token: string; serverId: string; lang: string; poolId: string } {
     const parsedUrl = new URL(inputUrl);
     const u8Token = parsedUrl.searchParams.get('u8_token');
 
@@ -242,7 +247,8 @@
     return {
       token: decodeURIComponent(he.decode(u8Token)),
       serverId: parsedUrl.searchParams.get('server') || '3',
-      lang: parsedUrl.searchParams.get('lang') || 'en-us'
+      lang: parsedUrl.searchParams.get('lang') || 'en-us',
+      poolId: parsedUrl.searchParams.get('pool_id') || ''
     };
   }
 
@@ -260,7 +266,7 @@
       token = parsed.token;
       serverId = parsed.serverId;
       lang = parsed.lang;
-      startFetching(token, serverId, lang);
+      startFetching(token, serverId, lang, parsed.poolId);
     } catch (err: any) {
       errorMsg = err.message || 'Invalid URL. Make sure it contains u8_token.';
     }
@@ -297,7 +303,7 @@
       serverId = parsed.serverId;
       lang = parsed.lang;
 
-      startFetching(token, serverId, lang);
+      startFetching(token, serverId, lang, parsed.poolId);
     } catch (err: any) {
       errorMsg = err.message || 'Failed to read the selected file.';
     }
@@ -309,7 +315,7 @@
     errorMsg = '';
   }
 
-  function startFetching(currentToken: string, serverId: string, lang: string) {
+  function startFetching(currentToken: string, serverId: string, lang: string, currentPoolId: string) {
     isFetching = true;
     errorMsg = '';
     startupErrorMsg = '';
@@ -325,15 +331,66 @@
           maxWeaponSeqId: await getMaxWeaponSeqId(),
         }));
 
+        const apiPoolCandidates = new Map<string, BannerCandidate>();
+        const observePool = (candidate: BannerCandidate) => {
+          if (candidate.id && !apiPoolCandidates.has(candidate.id)) {
+            apiPoolCandidates.set(candidate.id, candidate);
+          }
+        };
+
         const chars = await fetchAllCharacters(currentToken, serverId, lang, (pool, count) => {
           fetchingStatus = `Scanning character pool ${pool}... Found ${count} new pulls.`;
-        }, maxCharSeqId);
+        }, maxCharSeqId, observePool);
 
         const weaps = await fetchAllWeapons(currentToken, serverId, lang, (count: number) => {
           fetchingStatus = `Scanning weapon pools... Found ${count} new pulls.`;
-        }, maxWeaponSeqId);
+        }, maxWeaponSeqId, observePool);
+
+        fetchingStatus = 'Discovering banner metadata...';
+        if (currentPoolId) {
+          observePool({
+            id: currentPoolId,
+            poolName: currentPoolId,
+            poolType: inferBannerPoolType(currentPoolId),
+          });
+        }
+
+        const missingCandidates = getMissingBannerCandidates(
+          Array.from(apiPoolCandidates.values()),
+          banners,
+        );
+        const confirmedMetadata = await fetchBannerMetadata(
+          Array.from(apiPoolCandidates.values()),
+          serverId,
+          lang,
+        );
+        const associatedWeaponCandidates = confirmedMetadata
+          .filter((banner) => banner.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL)
+          .map((banner): BannerCandidate | undefined => {
+            const id = getAssociatedWeaponPoolId(banner.id);
+            return id ? { id, poolName: id, poolType: 'weapon' } : undefined;
+          })
+          .filter((candidate): candidate is BannerCandidate => candidate !== undefined);
+        const associatedWeaponMetadata = await fetchBannerMetadata(
+          getMissingBannerCandidates(associatedWeaponCandidates, banners),
+          serverId,
+          lang,
+        );
+        const discoveredBanners = new Map<string, BannerInfo>();
+        for (const candidate of missingCandidates) {
+          discoveredBanners.set(candidate.id, candidate);
+        }
+        for (const banner of confirmedMetadata) {
+          discoveredBanners.set(banner.id, banner);
+        }
+        for (const banner of associatedWeaponMetadata) {
+          discoveredBanners.set(banner.id, banner);
+        }
 
         await withDbSession(async () => {
+          if (discoveredBanners.size > 0) {
+            await upsertBanners(Array.from(discoveredBanners.values()));
+          }
           if (chars.length > 0) {
             await insertCharacters(chars);
           }
@@ -779,6 +836,7 @@
           isWeaponView={currentPage === 'banner:special-arsenal' || currentPage === 'banner:basic-arsenal' || currentPage.startsWith('weapon-banner:') || currentPage === 'all-arsenal-issues'}
           bannerId={activeBannerId}
           pityStats={pityStats}
+          {banners}
         />
       {/if}
       </div>

@@ -44,7 +44,6 @@
     CHARACTER_GACHA_POOL_TYPES,
     DUPLICATE_GUARANTEE_LIMIT,
     GUARANTEE_LIMIT as CHARACTER_GUARANTEE_LIMIT,
-    KNOWN_BANNERS,
     PITY_LIMIT,
     WEAPON_PITY_LIMIT,
     WEAPON_DUPLICATE_GUARANTEE_LIMIT,
@@ -60,43 +59,53 @@
   export let bannerId: string = 'all';
   export let isWeaponView: boolean = false;
   export let pityStats: PityStats | null = null;
+  export let banners: BannerInfo[] = [];
 
   // Rarity filter state: default shows 5 and 6 only
   let showRarity6 = true;
   let showRarity5 = true;
   let showRarity4 = false;
 
-  const specialBanners = KNOWN_BANNERS.filter(b => b.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL);
-  const jointBanners = KNOWN_BANNERS.filter(isJointBanner);
-  const specialWeaponBanners = KNOWN_BANNERS.filter(b => b.poolType === 'weapon' && !b.id.startsWith('weaponbox_constant'));
-  const standardWeaponBanners = KNOWN_BANNERS.filter(b => b.poolType === 'weapon' && b.id.startsWith('weaponbox_constant'));
-  
-  let activeSpecialId = specialBanners[0]?.id || '';
-  let activeJointId = jointBanners[0]?.id || '';
-  let activeWeaponSpecialId = specialWeaponBanners[0]?.id || '';
-  let activeWeaponStandardId = standardWeaponBanners[0]?.id || '';
+  let specialBanners: BannerInfo[] = [];
+  let jointBanners: BannerInfo[] = [];
+  let specialWeaponBanners: BannerInfo[] = [];
+  let standardWeaponBanners: BannerInfo[] = [];
+  let activeSpecialId = '';
+  let activeJointId = '';
+  let activeWeaponSpecialId = '';
+  let activeWeaponStandardId = '';
+
+  $: specialBanners = banners.filter(b => b.poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL);
+  $: jointBanners = banners.filter(isJointBanner);
+  $: specialWeaponBanners = banners.filter(b => b.poolType === 'weapon' && !b.id.startsWith('weaponbox_constant'));
+  $: standardWeaponBanners = banners.filter(b => b.poolType === 'weapon' && b.id.startsWith('weaponbox_constant'));
+  $: if (!specialBanners.some(b => b.id === activeSpecialId)) activeSpecialId = specialBanners[0]?.id || '';
+  $: if (!jointBanners.some(b => b.id === activeJointId)) activeJointId = jointBanners[0]?.id || '';
+  $: if (!specialWeaponBanners.some(b => b.id === activeWeaponSpecialId)) activeWeaponSpecialId = specialWeaponBanners[0]?.id || '';
+  $: if (!standardWeaponBanners.some(b => b.id === activeWeaponStandardId)) activeWeaponStandardId = standardWeaponBanners[0]?.id || '';
 
   $: currentBanner = (() => {
+    const fallbackBanner: BannerInfo = {
+      id: 'all',
+      poolType: '',
+      poolName: isWeaponView ? 'All Arsenal Issues' : 'All Headhunting'
+    };
     if (bannerId === 'all') {
-      return {
-        id: 'all',
-        poolType: '',
-        poolName: isWeaponView ? 'All Arsenal Issues' : 'All Headhunting'
-      } as BannerInfo;
+      return fallbackBanner;
     }
     if (bannerId === 'special-headhunting') {
-      return KNOWN_BANNERS.find(b => b.id === activeSpecialId) || specialBanners[0];
+      return banners.find(b => b.id === activeSpecialId) || specialBanners[0] || fallbackBanner;
     }
     if (bannerId === 'joint-headhunting') {
-      return KNOWN_BANNERS.find(b => b.id === activeJointId) || jointBanners[0];
+      return banners.find(b => b.id === activeJointId) || jointBanners[0] || fallbackBanner;
     }
     if (bannerId === 'special-arsenal') {
-      return KNOWN_BANNERS.find(b => b.id === activeWeaponSpecialId) || specialWeaponBanners[0];
+      return banners.find(b => b.id === activeWeaponSpecialId) || specialWeaponBanners[0] || fallbackBanner;
     }
     if (bannerId === 'basic-arsenal') {
-      return KNOWN_BANNERS.find(b => b.id === activeWeaponStandardId) || standardWeaponBanners[0];
+      return banners.find(b => b.id === activeWeaponStandardId) || standardWeaponBanners[0] || fallbackBanner;
     }
-    return KNOWN_BANNERS.find(b => b.id === bannerId) || KNOWN_BANNERS[0];
+    return banners.find(b => b.id === bannerId) || banners[0] || fallbackBanner;
   })();
 
   $: bannerImageUrl = getBannerImage(currentBanner.id);
@@ -114,7 +123,7 @@
 
   // Sort by seqId descending (newest first)
   $: sortedItems = [...filteredItems].sort((a, b) => Number(b.seqId) - Number(a.seqId));
-  $: guaranteedPulls = buildGuaranteedPullLookup(items);
+  $: guaranteedPulls = buildGuaranteedPullLookup(items, banners);
 
   $: totalInView = filteredByBanner.length;
   $: sixStarCount = filteredByBanner.filter(i => i.rarity === 6).length;

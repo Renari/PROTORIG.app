@@ -38,13 +38,13 @@ function isFeaturedPull(item: GachaRecordItem, banner: BannerInfo): boolean {
   return featuredIds.includes(item.charId);
 }
 
-function resolveGuaranteeBanner(item: GachaRecordItem): BannerInfo | null {
-  const exactMatch = KNOWN_BANNERS.find((banner) => banner.id === item.poolId);
+function resolveGuaranteeBanner(item: GachaRecordItem, banners: BannerInfo[]): BannerInfo | null {
+  const exactMatch = banners.find((banner) => banner.id === item.poolId);
   if (exactMatch?.featured) {
     return exactMatch;
   }
 
-  return KNOWN_BANNERS.find((banner) => {
+  return banners.find((banner) => {
     if (!banner.featured) {
       return false;
     }
@@ -88,13 +88,16 @@ function isGuaranteedPull(
   return nextPullNumber % duplicateLimit === 0;
 }
 
-export function buildGuaranteedPullLookup(items: GachaRecordItem[]): Record<string, boolean> {
+export function buildGuaranteedPullLookup(
+  items: GachaRecordItem[],
+  banners: BannerInfo[] = KNOWN_BANNERS,
+): Record<string, boolean> {
   const guaranteedBySeqId: Record<string, boolean> = {};
   const guaranteeStateByBannerId = new Map<string, GuaranteeState>();
   const chronologicalItems = [...items].sort((a, b) => Number(a.seqId) - Number(b.seqId));
 
   for (const item of chronologicalItems) {
-    const banner = resolveGuaranteeBanner(item);
+    const banner = resolveGuaranteeBanner(item, banners);
     if (!banner?.featured) {
       guaranteedBySeqId[item.seqId] = false;
       continue;
