@@ -1,5 +1,17 @@
 [
   {
+    "id": "special_1_4_1",
+    "poolType": "E_CharacterGachaPoolType_Special",
+    "poolName": "North Yearns the Rift Vigile",
+    "featured": "chr_0032_lizhiyan"
+  },
+  {
+    "id": "weponbox_1_4_1",
+    "poolType": "weapon",
+    "poolName": "Military Grade Issue",
+    "featured": "wpn_funnel_0016"
+  },
+  {
     "id": "special_1_3_2",
     "poolType": "E_CharacterGachaPoolType_Special",
     "poolName": "Expunger of Sin",
@@ -27,7 +39,12 @@
     "id": "joint_1_2_2",
     "poolType": "E_CharacterGachaPoolType_Joint",
     "poolName": "Fest of Brilliance",
-    "featured": ["chr_0029_pograni", "chr_0013_aglina", "chr_0016_laevat", "chr_0025_ardelia"]
+    "featured": [
+      "chr_0029_pograni",
+      "chr_0013_aglina",
+      "chr_0016_laevat",
+      "chr_0025_ardelia"
+    ]
   },
   {
     "id": "weponbox_1_2_3",
