@@ -113,4 +113,53 @@ describe('banner and API metadata', () => {
       poolType: CHARACTER_GACHA_POOL_TYPES.SPECIAL,
     });
   });
+
+  it('reports identifying fields when a character record has no rarity', async () => {
+    vi.mocked(libcurl.fetch).mockImplementation(async (url) => {
+      const poolType = new URL(String(url)).searchParams.get('pool_type');
+      const list = poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL ? [{
+        poolId: 'special_1_4_1', poolName: 'North Yearns the Rift Vigile', charId: 'chr_invalid', charName: 'Invalid',
+        isFree: false, isNew: false, gachaTs: '200', seqId: '2',
+      }] : [];
+      return {
+        ok: true,
+        text: async () => JSON.stringify({ code: 0, data: { list, hasMore: false }, msg: '' }),
+      } as any;
+    });
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(fetchAllCharacters('token', '3', 'en-us', () => {}, 0)).rejects.toThrow(
+      'Character record has invalid rarity: pool=special_1_4_1, character=chr_invalid, seq=2, rarity=undefined, fields=poolId,poolName,charId,charName,isFree,isNew,gachaTs,seqId',
+    );
+    expect(consoleError).toHaveBeenCalledWith(
+      '[Endfield API] Character record has invalid rarity: pool=special_1_4_1, character=chr_invalid, seq=2, rarity=undefined, fields=poolId,poolName,charId,charName,isFree,isNew,gachaTs,seqId',
+    );
+
+    consoleError.mockRestore();
+  });
+
+  it('skips gift_intel_book records without skipping character pulls', async () => {
+    vi.mocked(libcurl.fetch).mockImplementation(async (url) => {
+      const poolType = new URL(String(url)).searchParams.get('pool_type');
+      const list = poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL ? [
+        {
+          kind: 'gift_intel_book', poolId: 'special_1_4_1', poolName: 'North Yearns the Rift Vigile',
+          nameText: 'Localized dossier name', gachaTs: '201', seqId: '3',
+        },
+        {
+          poolId: 'special_1_4_1', poolName: 'North Yearns the Rift Vigile', charId: 'chr_valid', charName: 'Valid',
+          rarity: 4, isFree: false, isNew: false, gachaTs: '200', seqId: '2',
+        },
+      ] : [];
+      return {
+        ok: true,
+        text: async () => JSON.stringify({ code: 0, data: { list, hasMore: false }, msg: '' }),
+      } as any;
+    });
+
+    const pulls = await fetchAllCharacters('token', '3', 'en-us', () => {}, 0);
+
+    expect(pulls).toHaveLength(1);
+    expect(pulls[0].charId).toBe('chr_valid');
+  });
 });
