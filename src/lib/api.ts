@@ -29,6 +29,23 @@ export interface EndfieldGachaCharacter {
   pity?: number | null;
 }
 
+interface EndfieldGachaDossierRecord {
+  kind: 'gift_intel_book';
+  poolId: string;
+  poolName: string;
+  nameText: string;
+  gachaTs: string;
+  seqId: string;
+}
+
+type EndfieldGachaCharacterRecord = EndfieldGachaCharacter | EndfieldGachaDossierRecord;
+
+function isHeadhuntingDossier(
+  record: EndfieldGachaCharacterRecord,
+): record is EndfieldGachaDossierRecord {
+  return 'kind' in record && record.kind === 'gift_intel_book';
+}
+
 export interface EndfieldGachaWeapon {
   poolId: string;
   poolName: string;
@@ -188,7 +205,7 @@ export async function fetchBannerMetadata(
 export interface EndfieldGachaResponse {
   code: number;
   data: {
-    list: EndfieldGachaCharacter[];
+    list: EndfieldGachaCharacterRecord[];
     hasMore: boolean;
   };
   msg: string;
@@ -249,7 +266,10 @@ export async function fetchAllCharacters(
       }
 
       const list = json.data.list || [];
-      const invalidCharacter = list.find((item) => !Number.isFinite(item.rarity));
+      const characters = list.filter(
+        (item): item is EndfieldGachaCharacter => !isHeadhuntingDossier(item),
+      );
+      const invalidCharacter = characters.find((item) => !Number.isFinite(item.rarity));
       if (invalidCharacter) {
         const diagnostic = [
           `pool=${invalidCharacter.poolId}`,
@@ -274,7 +294,9 @@ export async function fetchAllCharacters(
           reachedExisting = true;
           break;
         }
-        allCharacters.push(item);
+        if (!isHeadhuntingDossier(item)) {
+          allCharacters.push(item);
+        }
       }
 
       if (list.length > 0 && !reachedExisting) {
