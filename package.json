@@ -27,7 +27,7 @@
     "express": "^5.2.1",
     "he": "^1.2.0",
     "jsdom": "^28.1.0",
-    "postcss": "^8.5.14",
+    "postcss": "^8.5.23",
     "svelte": "^5.55.7",
     "svelte-check": "^4.3.4",
     "tailwindcss": "^4.2.1",
@@ -35,7 +35,7 @@
     "vite": "^8.0.16",
     "vite-plugin-jsonx": "^1.2.2",
     "vitest": "^4.1.0",
-    "ws": "^8.19.0"
+    "ws": "^8.21.1"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
