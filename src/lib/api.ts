@@ -59,6 +59,24 @@ export interface EndfieldGachaWeapon {
   pity?: number | null;
 }
 
+interface EndfieldGachaGiftWeaponRecord {
+  kind: 'gift_weapon';
+  poolId: string;
+  poolName: string;
+  nameText: string;
+  gachaTs: string;
+  seqId: string;
+  giftRewardLabel: string;
+}
+
+type EndfieldGachaWeaponRecord = EndfieldGachaWeapon | EndfieldGachaGiftWeaponRecord;
+
+function isGiftWeapon(
+  record: EndfieldGachaWeaponRecord,
+): record is EndfieldGachaGiftWeaponRecord {
+  return 'kind' in record && record.kind === 'gift_weapon';
+}
+
 export type GachaRecordItem = EndfieldGachaCharacter | EndfieldGachaWeapon;
 
 export interface BannerCandidate {
@@ -321,7 +339,7 @@ export interface EndfieldGachaWeaponPool {
 export interface EndfieldGachaWeaponResponse {
   code: number;
   data: {
-    list: EndfieldGachaWeapon[];
+    list: EndfieldGachaWeaponRecord[];
     hasMore: boolean;
   };
   msg: string;
@@ -382,7 +400,9 @@ export async function fetchAllWeapons(
         reachedExisting = true;
         break;
       }
-      allWeapons.push(item);
+      if (!isGiftWeapon(item)) {
+        allWeapons.push(item);
+      }
     }
 
     if (list.length > 0 && !reachedExisting) {

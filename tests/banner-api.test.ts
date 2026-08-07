@@ -12,7 +12,7 @@ vi.mock('libcurl.js/bundled', () => ({
 }));
 
 import { libcurl } from 'libcurl.js/bundled';
-import { CHARACTER_FETCH_POOL_TYPES, fetchAllCharacters, getAssociatedWeaponPoolId, getMissingBannerCandidates, inferBannerPoolType, inferCharacterPoolType, mapContentToBanner, type BannerCandidate } from '../src/lib/api';
+import { CHARACTER_FETCH_POOL_TYPES, fetchAllCharacters, fetchAllWeapons, getAssociatedWeaponPoolId, getMissingBannerCandidates, inferBannerPoolType, inferCharacterPoolType, mapContentToBanner, type BannerCandidate } from '../src/lib/api';
 import { CHARACTER_GACHA_POOL_TYPES, KNOWN_BANNERS } from '../src/lib/banners';
 
 describe('banner and API metadata', () => {
@@ -161,5 +161,35 @@ describe('banner and API metadata', () => {
 
     expect(pulls).toHaveLength(1);
     expect(pulls[0].charId).toBe('chr_valid');
+  });
+
+  it('skips gift_weapon records without skipping weapon pulls', async () => {
+    vi.mocked(libcurl.fetch).mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify({
+        code: 0,
+        data: {
+          list: [
+            {
+              kind: 'gift_weapon', poolId: 'weponbox_1_3_1', poolName: 'Scarlet Knot Issue',
+              nameText: 'Amaranthine Tassel', gachaTs: '1785683585293', seqId: '361',
+              giftRewardLabel: 'Scarlet Knot Tribute',
+            },
+            {
+              poolId: 'weponbox_1_3_1', poolName: 'Scarlet Knot Issue', weaponId: 'wpn_valid',
+              weaponName: 'Valid', weaponType: 'Sword', rarity: 4, isNew: false,
+              gachaTs: '1785683585292', seqId: '360',
+            },
+          ],
+          hasMore: false,
+        },
+        msg: '',
+      }),
+    } as any);
+
+    const pulls = await fetchAllWeapons('token', '3', 'en-us', () => {}, 0);
+
+    expect(pulls).toHaveLength(1);
+    expect(pulls[0].weaponId).toBe('wpn_valid');
   });
 });
