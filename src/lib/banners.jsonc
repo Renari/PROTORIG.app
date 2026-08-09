@@ -1,5 +1,17 @@
 [
   {
+    "id": "special_1_4_2",
+    "poolType": "E_CharacterGachaPoolType_Special",
+    "poolName": "Good Morning from Your Dawnstar",
+    "featured": "chr_0035_liino"
+  },
+  {
+    "id": "weponbox_1_4_2",
+    "poolType": "weapon",
+    "poolName": "Bedazzled Issue",
+    "featured": "wpn_lance_0014"
+  },
+  {
     "id": "special_1_4_1",
     "poolType": "E_CharacterGachaPoolType_Special",
     "poolName": "North Yearns the Rift Vigile",
