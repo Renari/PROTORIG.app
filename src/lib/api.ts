@@ -284,23 +284,6 @@ export async function fetchAllCharacters(
       }
 
       const list = json.data.list || [];
-      const characters = list.filter(
-        (item): item is EndfieldGachaCharacter => !isHeadhuntingDossier(item),
-      );
-      const invalidCharacter = characters.find((item) => !Number.isFinite(item.rarity));
-      if (invalidCharacter) {
-        const diagnostic = [
-          `pool=${invalidCharacter.poolId}`,
-          `character=${invalidCharacter.charId}`,
-          `seq=${invalidCharacter.seqId}`,
-          `rarity=${String(invalidCharacter.rarity)}`,
-          `fields=${Object.keys(invalidCharacter).join(',')}`,
-        ].join(', ');
-
-        console.error(`[Endfield API] Character record has invalid rarity: ${diagnostic}`);
-        throw new Error(`Character record has invalid rarity: ${diagnostic}`);
-      }
-
       for (const item of list) {
         if (item.poolId) {
           onPoolObserved?.({ id: item.poolId, poolName: item.poolName, poolType });
