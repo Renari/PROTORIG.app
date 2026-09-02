@@ -1,5 +1,17 @@
 [
   {
+    "id": "special_1_5_1",
+    "poolType": "E_CharacterGachaPoolType_Special",
+    "poolName": "Winter Hunt",
+    "featured": "chr_0034_typhoea"
+  },
+  {
+    "id": "weponbox_1_5_1",
+    "poolType": "weapon",
+    "poolName": "Deep Cold Issue",
+    "featured": "wpn_funnel_0019"
+  },
+  {
     "id": "special_1_4_2",
     "poolType": "E_CharacterGachaPoolType_Special",
     "poolName": "Good Morning from Your Dawnstar",
