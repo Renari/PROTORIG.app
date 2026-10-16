@@ -1,5 +1,17 @@
 [
   {
+    "id": "special_1_6_1",
+    "poolType": "E_CharacterGachaPoolType_Special",
+    "poolName": "Rejuvenation",
+    "featured": "chr_0036_jsspsi"
+  },
+  {
+    "id": "weaponbox_1_6_1",
+    "poolType": "weapon",
+    "poolName": "Seal of Jade Issue",
+    "featured": "wpn_claym_0018"
+  },
+  {
     "id": "special_1_5_1",
     "poolType": "E_CharacterGachaPoolType_Special",
     "poolName": "Winter Hunt",
