@@ -128,7 +128,8 @@ describe('banner and API metadata', () => {
     vi.mocked(libcurl.fetch).mockImplementation(async (url) => {
       const poolType = new URL(String(url)).searchParams.get('pool_type');
       const list = poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL ? [{
-        poolId: 'special_1_4_1', poolName: 'North Yearns the Rift Vigile', charId: 'chr_new', charName: 'New',
+        kind: 'draw', poolId: 'special_1_4_1', poolName: 'North Yearns the Rift Vigile', charId: 'chr_new', charName: 'New',
+        poolVersion: null, nameText: 'New',
         rarity: 4, isFree: false, isNew: false, gachaTs: '200', seqId: '2',
       }] : [];
       return {
@@ -148,40 +149,17 @@ describe('banner and API metadata', () => {
     });
   });
 
-  it('reports identifying fields when a character record has no rarity', async () => {
-    vi.mocked(libcurl.fetch).mockImplementation(async (url) => {
-      const poolType = new URL(String(url)).searchParams.get('pool_type');
-      const list = poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL ? [{
-        poolId: 'special_1_4_1', poolName: 'North Yearns the Rift Vigile', charId: 'chr_invalid', charName: 'Invalid',
-        isFree: false, isNew: false, gachaTs: '200', seqId: '2',
-      }] : [];
-      return {
-        ok: true,
-        text: async () => JSON.stringify({ code: 0, data: { list, hasMore: false }, msg: '' }),
-      } as any;
-    });
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    await expect(fetchAllCharacters('token', '3', 'en-us', () => {}, 0)).rejects.toThrow(
-      'Character record has invalid rarity: pool=special_1_4_1, character=chr_invalid, seq=2, rarity=undefined, fields=poolId,poolName,charId,charName,isFree,isNew,gachaTs,seqId',
-    );
-    expect(consoleError).toHaveBeenCalledWith(
-      '[Endfield API] Character record has invalid rarity: pool=special_1_4_1, character=chr_invalid, seq=2, rarity=undefined, fields=poolId,poolName,charId,charName,isFree,isNew,gachaTs,seqId',
-    );
-
-    consoleError.mockRestore();
-  });
-
-  it('skips gift_intel_book records without skipping character pulls', async () => {
+  it.each(['gift_intel_book', 'gift_operator_token', 'future_reward', undefined, null, ''])('skips character records with kind %s without skipping draws', async (kind) => {
     vi.mocked(libcurl.fetch).mockImplementation(async (url) => {
       const poolType = new URL(String(url)).searchParams.get('pool_type');
       const list = poolType === CHARACTER_GACHA_POOL_TYPES.SPECIAL ? [
         {
-          kind: 'gift_intel_book', poolId: 'special_1_4_1', poolName: 'North Yearns the Rift Vigile',
-          nameText: 'Localized dossier name', gachaTs: '201', seqId: '3',
+          kind, poolId: 'special_1_6_1', poolName: 'Rejuvenation', poolVersion: null,
+          nameText: "Si's Token", gachaTs: '1792121621485', seqId: '1532',
         },
         {
-          poolId: 'special_1_4_1', poolName: 'North Yearns the Rift Vigile', charId: 'chr_valid', charName: 'Valid',
+          kind: 'draw', poolId: 'special_1_4_1', poolName: 'North Yearns the Rift Vigile', charId: 'chr_valid', charName: 'Valid',
+          poolVersion: null, nameText: 'Valid',
           rarity: 4, isFree: false, isNew: false, gachaTs: '200', seqId: '2',
         },
       ] : [];
@@ -197,7 +175,7 @@ describe('banner and API metadata', () => {
     expect(pulls[0].charId).toBe('chr_valid');
   });
 
-  it('skips gift_weapon records without skipping weapon pulls', async () => {
+  it.each(['gift_weapon', 'gift_operator_token', 'future_reward', undefined, null, ''])('skips weapon records with kind %s without skipping draws', async (kind) => {
     vi.mocked(libcurl.fetch).mockResolvedValue({
       ok: true,
       text: async () => JSON.stringify({
@@ -205,12 +183,13 @@ describe('banner and API metadata', () => {
         data: {
           list: [
             {
-              kind: 'gift_weapon', poolId: 'weponbox_1_3_1', poolName: 'Scarlet Knot Issue',
-              nameText: 'Amaranthine Tassel', gachaTs: '1785683585293', seqId: '361',
+              kind, poolId: 'weponbox_1_3_1', poolName: 'Scarlet Knot Issue',
+              poolVersion: null, nameText: 'Amaranthine Tassel', gachaTs: '1785683585293', seqId: '361',
               giftRewardLabel: 'Scarlet Knot Tribute',
             },
             {
-              poolId: 'weponbox_1_3_1', poolName: 'Scarlet Knot Issue', weaponId: 'wpn_valid',
+              kind: 'draw', poolId: 'weponbox_1_3_1', poolName: 'Scarlet Knot Issue', weaponId: 'wpn_valid',
+              poolVersion: null, nameText: 'Valid',
               weaponName: 'Valid', weaponType: 'Sword', rarity: 4, isNew: false,
               gachaTs: '1785683585292', seqId: '360',
             },
@@ -225,5 +204,62 @@ describe('banner and API metadata', () => {
 
     expect(pulls).toHaveLength(1);
     expect(pulls[0].weaponId).toBe('wpn_valid');
+  });
+
+  it.each(['character', 'weapon'])('paginates through ignored %s records and stops at existing history', async (type) => {
+    const isCharacter = type === 'character';
+    const metadata = {
+      poolId: isCharacter ? 'special_1_6_1' : 'weaponbox_1_6_1',
+      poolName: 'Rejuvenation', poolVersion: null, nameText: "Si's Token",
+    };
+    const draw = {
+      ...metadata, kind: 'draw', nameText: 'Valid', rarity: 6, isNew: false,
+      ...(isCharacter
+        ? { charId: 'chr_valid', charName: 'Valid', isFree: false }
+        : { weaponId: 'wpn_valid', weaponName: 'Valid', weaponType: 'Sword' }),
+      gachaTs: '300', seqId: '3',
+    };
+    const cursors: (string | null)[] = [];
+    vi.mocked(libcurl.fetch).mockImplementation(async (url) => {
+      const params = new URL(String(url)).searchParams;
+      let list: object[] = [];
+      let hasMore = false;
+      if (!isCharacter || params.get('pool_type') === CHARACTER_GACHA_POOL_TYPES.SPECIAL) {
+        const cursor = params.get('seq_id');
+        cursors.push(cursor);
+        if (cursor === null) {
+          list = [{ ...metadata, kind: 'gift_operator_token', gachaTs: '400', seqId: '4' }];
+          hasMore = true;
+        } else if (cursor === '4') {
+          list = [draw, { ...metadata, kind: 'future_reward', gachaTs: '200', seqId: '2' }];
+          hasMore = true;
+        } else if (cursor === '2') {
+          list = [{ ...draw, gachaTs: '100', seqId: '1' }];
+          hasMore = true;
+        } else {
+          throw new Error(`Unexpected cursor: ${cursor}`);
+        }
+      }
+      return {
+        ok: true,
+        text: async () => JSON.stringify({ code: 0, data: { list, hasMore }, msg: '' }),
+      } as any;
+    });
+    const progress = vi.fn();
+    const observed = vi.fn();
+
+    const pulls = isCharacter
+      ? await fetchAllCharacters('token', '3', 'en-us', (pool, count) => {
+        if (pool === 'Special') progress(count);
+      }, 1, observed)
+      : await fetchAllWeapons('token', '3', 'en-us', progress, 1, observed);
+
+    expect(pulls).toEqual([draw]);
+    expect(cursors).toEqual([null, '4', '2']);
+    expect(progress.mock.calls).toEqual([[0], [1], [1]]);
+    expect(observed).toHaveBeenCalledWith({
+      id: metadata.poolId, poolName: metadata.poolName,
+      poolType: isCharacter ? CHARACTER_GACHA_POOL_TYPES.SPECIAL : 'weapon',
+    });
   });
 });
