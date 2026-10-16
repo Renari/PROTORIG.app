@@ -35,6 +35,7 @@
   }
 
   import Icon from '@iconify/svelte';
+  import BannerSelector from './BannerSelector.svelte';
   import gachaWeaponExploreBtnIcon from './assets/icons/gachaweapon_explorebtn_icon.png';
   import gachaPoolIconHeadhuntWeapon from './assets/icons/gachapool_headhunt_weapon_icon.png';
   import type { GachaRecordItem } from './lib/api';
@@ -226,51 +227,15 @@
 </script>
 
 <div class="space-y-6" style="animation: fadeInUp 0.5s ease-out forwards;">
-  <!-- Special Banner Tabs -->
+  <!-- Compact banner navigation -->
   {#if bannerId === 'special-headhunting'}
-    <div class="flex flex-wrap items-center gap-2 p-1.5 bg-zinc-800/80 rounded-xl border border-zinc-700/50 shadow-sm backdrop-blur-xl">
-      {#each specialBanners as sp}
-        <button
-          on:click={() => activeSpecialId = sp.id}
-          class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer {activeSpecialId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
-        >
-          {sp.poolName}
-        </button>
-      {/each}
-    </div>
+    <BannerSelector banners={specialBanners} bind:selectedId={activeSpecialId} />
   {:else if bannerId === 'joint-headhunting'}
-    <div class="flex flex-wrap items-center gap-2 p-1.5 bg-zinc-800/80 rounded-xl border border-zinc-700/50 shadow-sm backdrop-blur-xl">
-      {#each jointBanners as sp}
-        <button
-          on:click={() => activeJointId = sp.id}
-          class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer {activeJointId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
-        >
-          {sp.poolName}
-        </button>
-      {/each}
-    </div>
+    <BannerSelector banners={jointBanners} bind:selectedId={activeJointId} />
   {:else if bannerId === 'special-arsenal'}
-    <div class="flex flex-wrap items-center gap-2 p-1.5 bg-zinc-800/80 rounded-xl border border-zinc-700/50 shadow-sm backdrop-blur-xl">
-      {#each specialWeaponBanners as sp}
-        <button
-          on:click={() => activeWeaponSpecialId = sp.id}
-          class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer {activeWeaponSpecialId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
-        >
-          {sp.poolName}
-        </button>
-      {/each}
-    </div>
+    <BannerSelector banners={specialWeaponBanners} bind:selectedId={activeWeaponSpecialId} />
   {:else if bannerId === 'basic-arsenal'}
-    <div class="flex flex-wrap items-center gap-2 p-1.5 bg-zinc-800/80 rounded-xl border border-zinc-700/50 shadow-sm backdrop-blur-xl">
-      {#each standardWeaponBanners as sp}
-        <button
-          on:click={() => activeWeaponStandardId = sp.id}
-          class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer {activeWeaponStandardId === sp.id ? 'bg-primary-500 text-zinc-950 shadow-md' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'}"
-        >
-          {sp.poolName}
-        </button>
-      {/each}
-    </div>
+    <BannerSelector banners={standardWeaponBanners} bind:selectedId={activeWeaponStandardId} />
   {/if}
 
   <!-- Hero and Stats Container -->
