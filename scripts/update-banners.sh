@@ -27,7 +27,8 @@ Options:
 
 The URL may point to any authenticated Endfield webview page. Pool IDs are discovered
 from the record APIs; an explicit pool_id in the URL is also checked. Confirmed special
-banners cause their matching weponbox_* pool to be checked as well.
+banners cause their matching weapon pool to be checked as well: weponbox_* before
+version 1.6, weaponbox_* starting with version 1.6.
 EOF
 }
 
@@ -114,8 +115,8 @@ DISCOVERED_POOL_IDS=()
 
 add_pool_id() {
   local pool_id=$1
-  [[ -n "$pool_id" ]] || return
-  [[ -z ${SEEN_POOL_IDS[$pool_id]+x} ]] || return
+  [[ -n "$pool_id" ]] || return 0
+  [[ -z ${SEEN_POOL_IDS[$pool_id]+x} ]] || return 0
   SEEN_POOL_IDS[$pool_id]=1
   DISCOVERED_POOL_IDS+=("$pool_id")
 }
@@ -248,8 +249,14 @@ for ((index = 0; index < ${#DISCOVERED_POOL_IDS[@]}; index++)); do
 
   echo "Confirmed: $pool_id ($pool_name)" >&2
 
-  if [[ "$pool_type" == "E_CharacterGachaPoolType_Special" && "$pool_id" == special_* ]]; then
-    add_pool_id "weponbox_${pool_id#special_}"
+  if [[ "$pool_type" == "E_CharacterGachaPoolType_Special" && "$pool_id" =~ ^special_([0-9]+)_([0-9]+)_([0-9]+)$ ]]; then
+    major=$((10#${BASH_REMATCH[1]}))
+    minor=$((10#${BASH_REMATCH[2]}))
+    weapon_prefix=weponbox
+    if ((major > 1 || (major == 1 && minor >= 6))); then
+      weapon_prefix=weaponbox
+    fi
+    add_pool_id "${weapon_prefix}_${pool_id#special_}"
   fi
 done
 

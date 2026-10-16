@@ -134,10 +134,15 @@ export function inferBannerPoolType(poolId: string): string {
   return inferCharacterPoolType(poolId);
 }
 
-/** Special character and weapon banners use the same version suffix. */
+/** Weapon pool IDs use the corrected spelling starting with version 1.6. */
 export function getAssociatedWeaponPoolId(poolId: string): string | undefined {
-  const match = /^special_(.+)$/i.exec(poolId);
-  return match ? `weponbox_${match[1]}` : undefined;
+  const match = /^special_((\d+)_(\d+)_\d+)$/i.exec(poolId);
+  if (!match) return undefined;
+
+  const major = Number(match[2]);
+  const minor = Number(match[3]);
+  const prefix = major > 1 || (major === 1 && minor >= 6) ? 'weaponbox' : 'weponbox';
+  return `${prefix}_${match[1]}`;
 }
 
 export function getMissingBannerCandidates(

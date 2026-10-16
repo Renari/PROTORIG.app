@@ -12,7 +12,7 @@ vi.mock('libcurl.js/bundled', () => ({
 }));
 
 import { libcurl } from 'libcurl.js/bundled';
-import { CHARACTER_FETCH_POOL_TYPES, fetchAllCharacters, fetchAllWeapons, getAssociatedWeaponPoolId, getMissingBannerCandidates, inferBannerPoolType, inferCharacterPoolType, mapContentToBanner, type BannerCandidate } from '../src/lib/api';
+import { CHARACTER_FETCH_POOL_TYPES, fetchAllCharacters, fetchAllWeapons, fetchBannerMetadata, getAssociatedWeaponPoolId, getMissingBannerCandidates, inferBannerPoolType, inferCharacterPoolType, mapContentToBanner, type BannerCandidate } from '../src/lib/api';
 import { CHARACTER_GACHA_POOL_TYPES, KNOWN_BANNERS } from '../src/lib/banners';
 
 describe('banner and API metadata', () => {
@@ -68,6 +68,40 @@ describe('banner and API metadata', () => {
     expect(inferBannerPoolType('weponbox_9_9_9')).toBe('weapon');
     expect(inferBannerPoolType('weaponbox_constant_9')).toBe('weapon');
     expect(getAssociatedWeaponPoolId('special_1_4_1')).toBe('weponbox_1_4_1');
+    expect(getAssociatedWeaponPoolId('standard')).toBeUndefined();
+  });
+
+  it.each([
+    ['special_1_5_1', 'weponbox_1_5_1'],
+    ['special_1_6_1', 'weaponbox_1_6_1'],
+    ['special_1_6_2', 'weaponbox_1_6_2'],
+    ['special_1_10_1', 'weaponbox_1_10_1'],
+    ['special_2_0_1', 'weaponbox_2_0_1'],
+    ['special_event', undefined],
+  ])('selects the weapon pool for %s by version', (id, expected) => {
+    expect(getAssociatedWeaponPoolId(id)).toBe(expected);
+  });
+
+  it('discovers weapon metadata when only the corrected weaponbox spelling exists', async () => {
+    vi.mocked(libcurl.fetch).mockImplementation(async (url) => {
+      const id = new URL(String(url)).searchParams.get('pool_id');
+      return {
+        ok: true,
+        text: async () => JSON.stringify(id === 'weaponbox_1_6_1' ? {
+          code: 0,
+          data: { pool: {
+            pool_gacha_type: 'weapon', pool_type: 'normal', pool_name: 'Seal of Jade Issue',
+            up6_name: 'Jade Vessel', all: [{ id: 'wpn_claym_0018', name: 'Jade Vessel', rarity: 6 }],
+          } },
+        } : { code: 40402, msg: 'Pool not found' }),
+      } as any;
+    });
+
+    const id = getAssociatedWeaponPoolId('special_1_6_1')!;
+    const candidates = [{ id, poolName: id, poolType: 'weapon' }];
+    expect(await fetchBannerMetadata(candidates, '3', 'en-us')).toEqual([{
+      id: 'weaponbox_1_6_1', poolType: 'weapon', poolName: 'Seal of Jade Issue', featured: 'wpn_claym_0018',
+    }]);
   });
 
   it('returns only pool IDs observed in the import that are missing from the database', () => {
