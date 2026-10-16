@@ -29,21 +29,21 @@ export interface EndfieldGachaCharacter {
   pity?: number | null;
 }
 
-interface EndfieldGachaDossierRecord {
-  kind: 'gift_intel_book';
+interface EndfieldGachaRecordMetadata {
+  kind: string;
   poolId: string;
   poolName: string;
+  poolVersion: string | null;
   nameText: string;
   gachaTs: string;
   seqId: string;
 }
 
-type EndfieldGachaCharacterRecord = EndfieldGachaCharacter | EndfieldGachaDossierRecord;
+type EndfieldGachaDrawRecord<T> = EndfieldGachaRecordMetadata & T & { kind: 'draw' };
+type EndfieldGachaRecord<T> = EndfieldGachaDrawRecord<T> | EndfieldGachaRecordMetadata;
 
-function isHeadhuntingDossier(
-  record: EndfieldGachaCharacterRecord,
-): record is EndfieldGachaDossierRecord {
-  return 'kind' in record && record.kind === 'gift_intel_book';
+function isDrawRecord<T>(record: EndfieldGachaRecord<T>): record is EndfieldGachaDrawRecord<T> {
+  return record.kind === 'draw';
 }
 
 export interface EndfieldGachaWeapon {
@@ -57,24 +57,6 @@ export interface EndfieldGachaWeapon {
   gachaTs: string;
   seqId: string;
   pity?: number | null;
-}
-
-interface EndfieldGachaGiftWeaponRecord {
-  kind: 'gift_weapon';
-  poolId: string;
-  poolName: string;
-  nameText: string;
-  gachaTs: string;
-  seqId: string;
-  giftRewardLabel: string;
-}
-
-type EndfieldGachaWeaponRecord = EndfieldGachaWeapon | EndfieldGachaGiftWeaponRecord;
-
-function isGiftWeapon(
-  record: EndfieldGachaWeaponRecord,
-): record is EndfieldGachaGiftWeaponRecord {
-  return 'kind' in record && record.kind === 'gift_weapon';
 }
 
 export type GachaRecordItem = EndfieldGachaCharacter | EndfieldGachaWeapon;
@@ -228,7 +210,7 @@ export async function fetchBannerMetadata(
 export interface EndfieldGachaResponse {
   code: number;
   data: {
-    list: EndfieldGachaCharacterRecord[];
+    list: EndfieldGachaRecord<EndfieldGachaCharacter>[];
     hasMore: boolean;
   };
   msg: string;
@@ -300,7 +282,7 @@ export async function fetchAllCharacters(
           reachedExisting = true;
           break;
         }
-        if (!isHeadhuntingDossier(item)) {
+        if (isDrawRecord(item)) {
           allCharacters.push(item);
         }
       }
@@ -327,7 +309,7 @@ export interface EndfieldGachaWeaponPool {
 export interface EndfieldGachaWeaponResponse {
   code: number;
   data: {
-    list: EndfieldGachaWeaponRecord[];
+    list: EndfieldGachaRecord<EndfieldGachaWeapon>[];
     hasMore: boolean;
   };
   msg: string;
@@ -388,7 +370,7 @@ export async function fetchAllWeapons(
         reachedExisting = true;
         break;
       }
-      if (!isGiftWeapon(item)) {
+      if (isDrawRecord(item)) {
         allWeapons.push(item);
       }
     }
